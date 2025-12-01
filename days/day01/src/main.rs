@@ -14,6 +14,12 @@ struct Cli {
     path: PathBuf,
 }
 
+struct Dial {
+    zero_count: u32,
+    position: u32,
+    positions: [u32],
+}
+
 fn main() -> Result<()> {
     let args = Cli::parse();
     let path = &args.path;
