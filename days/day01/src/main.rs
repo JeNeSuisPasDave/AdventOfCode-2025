@@ -76,12 +76,17 @@ fn main() -> Result<()> {
     // dial.left(1);
     // dial.right(1);
 
+    let mut line_num = 0;
     for line in lines {
         let line = line.with_context(|| {
             format!("Problem reading from `{}`", path.display())
         })?;
+        line_num += 1;
         if !re_inst.is_match(&line) {
-            println!("*** FAILED *** to match {}", line);
+            println!(
+                "*** FAILED *** to match line {}: '{}'",
+                line_num, line
+            );
             continue;
         }
         let caps = re_inst.captures(&line).unwrap();
@@ -93,11 +98,12 @@ fn main() -> Result<()> {
         } else if "R".eq(dir) {
             dial.right(dist);
         }
-        println!(
-            "Turn {} {} clicks; zero count is {}.",
-            dir, dist, dial.zero_count
-        );
+        // println!(
+        //     "Turn {} {} clicks; zero count is {}.",
+        //     dir, dist, dial.zero_count
+        // );
     }
+    println!("The password is {}.", dial.zero_count);
     Ok(())
 }
 

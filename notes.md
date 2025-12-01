@@ -41,3 +41,4 @@ How to have optional or default arguments in Rust? You can't. But you can implem
 
 For now, I'm just going to have a new(len: u32) and new_default() as constructors.
 
+I got Part 1 (Day 1) working and found the correct answer. Moving on to Part 2 ...
