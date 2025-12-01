@@ -37,26 +37,51 @@ impl Dial {
 
     fn left(&mut self, clicks: u32) {
         let d = clicks % self.len;
+        let wrap_count = (clicks - d) / self.len;
+        // if d != clicks {
+        //     println!("Found clicks > 99!!");
+        // }
         if d <= self.position {
             self.position -= d;
         } else {
+            if self.position != 0 {
+                self.zero_count += 1; // passed zero
+            }
             self.position = self.len + self.position - d;
         }
         if self.position == 0 {
             self.zero_count += 1;
         }
+        self.zero_count += wrap_count;
+        // println!(
+        //     "L{}; {} at position {}",
+        //     clicks, self.zero_count, self.position
+        // );
     }
 
     fn right(&mut self, clicks: u32) {
         let d = clicks % self.len;
-        if d <= ((self.len - 1) - self.position) {
+        let wrap_count = (clicks - d) / self.len;
+        // if d != clicks {
+        //     println!("Found clicks > 99!!");
+        // }
+        if d <= (self.len - self.position) {
             self.position += d;
         } else {
-            self.position = self.position + d - self.len;
+            if self.position != 0 {
+                self.zero_count += 1; // passed zero
+            }
+            self.position += d;
         }
+        self.position %= self.len;
         if self.position == 0 {
             self.zero_count += 1;
         }
+        self.zero_count += wrap_count;
+        // println!(
+        //     "R{}; {} at position {}",
+        //     clicks, self.zero_count, self.position
+        // );
     }
 }
 
