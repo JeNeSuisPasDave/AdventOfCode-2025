@@ -15,3 +15,29 @@ I'm thinking about creating a "Dial" structure with methods for turning left, ri
 First thing, though is to build the CLI parsing code and file reading code, along with basic error/panic handling. That's done.
 
 Next step is to develop the "Dial" structure. I created the Dial structure but now need to add methods. To do that I need to read the "5.3 Method Syntax" section of the Rust book.
+
+How to initialize a fixed length array with ascending integer values:
+
+``` rust
+    let numarray: [u32; 10] = core::array::from_fn(|i| i + 1);
+```
+
+How to initialized a vector with ascending integer values:
+
+``` rust
+    let numvec: Vec<u32> = Vec::from_iter(0..10);
+```
+
+How to assign a u32 from a usize:
+
+``` rust
+    let len: u32 = v.len().try_into().unwrap();
+```
+
+How to have optional or default arguments in Rust? You can't. But you can implement Default trait. See:
+
+- https://lucamoller.com/posts/2021-08/rust-doesnt-support-default-function-arguments-or-does-it
+- https://www.kirillvasiltsov.com/writing/optional-arguments-in-rust/
+
+For now, I'm just going to have a new(len: u32) and new_default() as constructors.
+
