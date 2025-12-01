@@ -18,17 +18,14 @@ struct Cli {
 struct Dial {
     zero_count: u32,
     position: u32,
-    positions: Vec<u32>,
     len: u32,
 }
 
 impl Dial {
     fn new(len: u32) -> Self {
-        let v: Vec<u32> = Vec::from_iter(0..len);
         Self {
             zero_count: 0,
             position: 50,
-            positions: v,
             len: len,
         }
     }
