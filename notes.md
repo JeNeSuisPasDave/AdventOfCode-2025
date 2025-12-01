@@ -12,3 +12,4 @@ I've setup an overall git rep for the 2025 challenge. The daily puzzles will be 
 
 I'm thinking about creating a "Dial" structure with methods for turning left, right, and counting zeros; also a method to reset the dial to a known starting position and reset the zero-counter.
 
+First thing, though is to build the CLI parsing code and file reading code, along with basic error/panic handling. That's done.
