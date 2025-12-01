@@ -4,6 +4,7 @@ use std::path::PathBuf;
 
 use anyhow::{Context, Result};
 use clap::Parser;
+use regex::Regex;
 
 /// Given input file containing the safe dial operations,
 /// determine the password.
@@ -70,12 +71,32 @@ fn main() -> Result<()> {
     let lines = rdr.lines();
 
     let mut dial = Dial::new_default();
-    dial.left(1);
-    dial.right(1);
+    let re_inst = Regex::new(r"([LR])([0-9]+)").unwrap();
+
+    // dial.left(1);
+    // dial.right(1);
+
     for line in lines {
         let line = line.with_context(|| {
             format!("Problem reading from `{}`", path.display())
         })?;
+        if !re_inst.is_match(&line) {
+            println!("*** FAILED *** to match {}", line);
+            continue;
+        }
+        let caps = re_inst.captures(&line).unwrap();
+        let dir: &str = caps.get(1).unwrap().as_str();
+        let dist: &str = caps.get(2).unwrap().as_str();
+        let dist: u32 = dist.parse::<u32>().unwrap();
+        if "L".eq(dir) {
+            dial.left(dist);
+        } else if "R".eq(dir) {
+            dial.right(dist);
+        }
+        println!(
+            "Turn {} {} clicks; zero count is {}.",
+            dir, dist, dial.zero_count
+        );
     }
     Ok(())
 }
