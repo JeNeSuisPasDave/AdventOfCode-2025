@@ -55,7 +55,28 @@ The answer was submitted and confirmed to be correct. Done with Day 1. Woot!
 
 *Tuesday, 2025-12-02*
 
+*08:00*
+
 I setup the project with part 1 specs, example data, and input data.
 
 Next I'll add the CLI wrapper and file reading logic, borrowing heavily from Day01.
+
+I got a pattern for a static regex variable from here (uses LazyLock):
+
+https://stackoverflow.com/a/79017001/1392864
+
+I don't know if that is the most idiomatic way of allocating a regex variable once (and using it across multiple function calls). I'd prefer that the regex be scoped to an associate Struct implementation but I don't think Rust allows that. I do hope it is private to the module, at least.
+
+I decided to support UTF-8 files. I then found that built-in support for UTF-8 file IO is not mature, so I've added a simple crate "utf8-chars" that adds character I/O to BufReader.
+
+**10:48**
+
+I've now got the code reading the input file and parsing it into IdRange objects. Next step is to create a function that produces a list of invalid IDs from a range.
+
+**13:58**
+
+I completed Part 1 and submitted the correct solution.
+I ran into problems with overflow and needed to accumulate
+into a u64 instead of a u32.
+
 
