@@ -48,3 +48,8 @@ Okay, I've captured the specs and the answer to Part 1. The second part requires
 I finished the second part. It was important to note that some instructions had clicks > 99. So counting the wraps around the dial was important (and the difference between the naive 2210 versus the correct 6358).
 
 The answer was submitted and confirmed to be correct. Done with Day 1. Woot!
+
+## Day 2
+
+Starting ...
+
