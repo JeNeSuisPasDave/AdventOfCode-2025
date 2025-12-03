@@ -98,5 +98,10 @@ I setup the project with part 1 specs, example data, and input data.
 
 Next I'll add the CLI wrapper and file reading logic, borrowing heavily from previous days.
 
+**07:29**
 
+Implemented the boiler plate for reading the input file and accumulating the max joltages. Next up is a method for finding the max joltage for each bank.
 
+**08:52**
+
+Implemented and passing unit tests. Next need to test with example data.

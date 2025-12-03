@@ -4,3 +4,6 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+anyhow = "1.0"
+clap = { version = "4.0", features = ["derive"] }
+utf8-chars = "3.0.0"
