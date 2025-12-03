@@ -118,3 +118,12 @@ So the problem was that I thought it could pick the batteries in any order ... e
 
 Solved the problem and added more tests. I got the correct answer from the example data.
 
+taking a break ...
+
+**10:23**
+
+...resuming. I submitted the answer using the downloaded data and was correct. Now updating with the Part 2 specs.
+
+**10:32**
+
+specs updated. taking another break ...
