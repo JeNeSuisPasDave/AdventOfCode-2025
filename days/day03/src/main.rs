@@ -22,14 +22,7 @@ struct Cli {
 struct BatteryBank {
     // joltage rating by battery id (the index, not the position)
     //
-    joltage_by_idx: BTreeMap<u32, u32>,
-    // index of the first battery with the largest joltage
-    //
-    idx_1st_largest: u32,
-    // index of the first battery with the next largest joltage
-    // (which could be as much joltage as the first largest battery)
-    //
-    idx_2nd_largest: u32,
+    joltage_by_idx: BTreeMap<u32, u64>,
 }
 
 // methods and associated methods for the BatteryBank struct
@@ -38,78 +31,79 @@ impl BatteryBank {
     fn new(spec: &str) -> Self {
         // load an indexed map with the joltage values
         //
-        let mut jbi: BTreeMap<u32, u32> = BTreeMap::new();
+        let mut jbi: BTreeMap<u32, u64> = BTreeMap::new();
         for (ii, c) in spec.chars().enumerate() {
-            if !c.is_digit(10) {
+            let radix = 10;
+            if !c.is_digit(radix) {
                 break;
             }
             let i = ii.try_into().unwrap();
-            let jj = c.to_digit(10).unwrap();
+            let jj = c.to_digit(radix).unwrap();
             let j = jj.try_into().unwrap();
             jbi.insert(i, j);
         }
-        // find the max battery, but don't consider the last
-        // battery.
-        //
-        let mut b_max: u32 = 0;
-        let jbi_len: u32 = jbi.len().try_into().unwrap();
-        let jbi_len_m1: u32 = jbi_len - 1;
-        for i in 0..jbi_len_m1 {
-            let j: u32 = *jbi.get(&i).unwrap();
-            if j > b_max {
-                b_max = j
-            };
-        }
-        // find the first index that has the max joltage
-        // and then find the largest joltage battery
-        // after that.
-        //
-        let mut idx_1st: u32 = u32::MAX;
-        let mut b_max2: u32 = 0;
-        let mut idx_2nd: u32 = u32::MAX;
-        for i in 0..jbi_len {
-            let j: u32 = *jbi.get(&i).unwrap();
-            if (idx_1st == u32::MAX) && (j == b_max) {
-                idx_1st = i;
-            } else if (idx_1st != u32::MAX) && (j > b_max2) {
-                b_max2 = j;
-                idx_2nd = i;
-            }
-        }
         BatteryBank {
             joltage_by_idx: jbi,
-            idx_1st_largest: idx_1st,
-            idx_2nd_largest: idx_2nd,
         }
     }
 
-    fn max_joltage(&self) -> Option<u32> {
-        // if we didn't find two batteries, return None
-        // because the battery bank spec must have been
-        // invalid.
+    fn find_first_largest(
+        &self,
+        idx_from: u32,
+        idx_to: u32,
+    ) -> Option<u32> {
+        let jbi = &self.joltage_by_idx;
+        let mut idx: u32 = u32::MAX;
+        let mut j_max: u64 = 0;
+        for i in idx_from..idx_to {
+            let j: u64 = *jbi.get(&i).unwrap();
+            if j > j_max {
+                j_max = j;
+                idx = i;
+            }
+        }
+        if idx == u32::MAX { None } else { Some(idx) }
+    }
+
+    fn max_joltage(&self, battery_count: u32) -> Option<u64> {
+        let jbi = &self.joltage_by_idx;
+        let jbi_len: u32 = jbi.len().try_into().unwrap();
+        // if there are fewer batteries in the bank than requested
+        // by battery_count, then return None.
         //
-        if self.idx_1st_largest == self.idx_2nd_largest {
+        if battery_count > jbi_len {
             return None;
         }
-        let maxj: u32;
-        if self.idx_1st_largest < self.idx_2nd_largest {
-            maxj =
-                self.joltage_by_idx.get(&self.idx_1st_largest).unwrap()
-                    * 10
-                    + self
-                        .joltage_by_idx
-                        .get(&self.idx_2nd_largest)
-                        .unwrap();
-        } else {
-            maxj =
-                self.joltage_by_idx.get(&self.idx_2nd_largest).unwrap()
-                    * 10
-                    + self
-                        .joltage_by_idx
-                        .get(&self.idx_1st_largest)
-                        .unwrap();
+        //
+        // otherwise, loop through the range of batteries
+        // that can be considered for each unidentified
+        // battery, identifying the first battery with the
+        // largest joltage.
+        //
+        let mut batteries: Vec<u32> = Vec::new();
+        let mut remaining_battery_count: u32 = battery_count;
+        let mut idx_start: u32 = 0;
+        let mut idx_up_to: u32 = jbi_len - remaining_battery_count + 1;
+        for _battery in 0..battery_count {
+            match self.find_first_largest(idx_start, idx_up_to) {
+                None => return None,
+                Some(idx) => {
+                    batteries.push(idx);
+                    remaining_battery_count -= 1;
+                    idx_start = idx + 1;
+                    idx_up_to = jbi_len - remaining_battery_count + 1;
+                }
+            }
         }
-        Some(maxj)
+        //
+        // Now construct the joltage of the selected batteries
+        //
+        let mut selected_joltage: u64 = 0;
+        for idx in batteries {
+            selected_joltage =
+                selected_joltage * 10 + *jbi.get(&idx).unwrap();
+        }
+        Some(selected_joltage)
     }
 }
 
@@ -127,20 +121,20 @@ fn main() -> Result<()> {
 
     // determine the max joltage for each bank
     //
-    let mut joltages: Vec<u32> = Vec::new();
+    let mut joltages: Vec<u64> = Vec::new();
     for line in lines {
         let line = line.with_context(|| {
             format!("Problem reading from `{}`", path.display())
         })?;
         let battery_bank = BatteryBank::new(line.trim());
-        let max_joltage = battery_bank.max_joltage().unwrap();
+        let max_joltage = battery_bank.max_joltage(12).unwrap();
         joltages.push(max_joltage);
         // println!("For '{}' max is {}", line.trim(), max_joltage);
     }
 
     // add up the max joltage for each bank
     //
-    let mut joltage_accum: u32 = 0;
+    let mut joltage_accum: u64 = 0;
     for joltage in joltages {
         joltage_accum += joltage;
     }
@@ -148,16 +142,16 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-// BatteryBank tests
+// BatteryBank tests with 2 batteries
 //
 
 #[test]
 fn check_all_ones() {
-    let ss = String::from("111111111");
+    let ss = String::from("1111111111111111");
     let s: &str = ss.as_str();
     let bb = BatteryBank::new(s);
-    let expected: u32 = 11;
-    match bb.max_joltage() {
+    let expected: u64 = 11;
+    match bb.max_joltage(2) {
         None => {
             assert!(false, "FAILED to find max joltage")
         }
@@ -167,11 +161,11 @@ fn check_all_ones() {
 
 #[test]
 fn check_ascending() {
-    let ss = String::from("123456789");
+    let ss = String::from("1234567899999999");
     let s: &str = ss.as_str();
     let bb = BatteryBank::new(s);
-    let expected: u32 = 89;
-    match bb.max_joltage() {
+    let expected: u64 = 99;
+    match bb.max_joltage(2) {
         None => {
             assert!(false, "FAILED to find max joltage")
         }
@@ -181,25 +175,11 @@ fn check_ascending() {
 
 #[test]
 fn check_ascending_descending() {
-    let ss = String::from("12345678987654321");
+    let ss = String::from("1234567898765432");
     let s: &str = ss.as_str();
     let bb = BatteryBank::new(s);
-    let expected: u32 = 98;
-    match bb.max_joltage() {
-        None => {
-            assert!(false, "FAILED to find max joltage")
-        }
-        Some(actual) => assert_eq!(expected, actual),
-    }
-}
-
-#[test]
-fn check_last_biggest() {
-    let ss = String::from("876543219");
-    let s: &str = ss.as_str();
-    let bb = BatteryBank::new(s);
-    let expected: u32 = 89;
-    match bb.max_joltage() {
+    let expected: u64 = 98;
+    match bb.max_joltage(2) {
         None => {
             assert!(false, "FAILED to find max joltage")
         }
@@ -209,11 +189,98 @@ fn check_last_biggest() {
 
 #[test]
 fn check_descending() {
-    let ss = String::from("987654321");
+    let ss = String::from("9876543219876543");
     let s: &str = ss.as_str();
     let bb = BatteryBank::new(s);
-    let expected: u32 = 98;
-    match bb.max_joltage() {
+    let expected: u64 = 99;
+    match bb.max_joltage(2) {
+        None => {
+            assert!(false, "FAILED to find max joltage")
+        }
+        Some(actual) => assert_eq!(expected, actual),
+    }
+}
+
+#[test]
+fn check_last_biggest() {
+    let ss = String::from("8181568765432119");
+    let s: &str = ss.as_str();
+    let bb = BatteryBank::new(s);
+    let expected: u64 = 89;
+    match bb.max_joltage(2) {
+        None => {
+            assert!(false, "FAILED to find max joltage")
+        }
+        Some(actual) => assert_eq!(expected, actual),
+    }
+}
+
+// BatteryBank tests with 12 batteries
+//
+
+#[test]
+fn check_all_ones_12() {
+    let ss = String::from("1111111111111111");
+    let s: &str = ss.as_str();
+    let bb = BatteryBank::new(s);
+    let expected: u64 = 111111111111;
+    match bb.max_joltage(12) {
+        None => {
+            assert!(false, "FAILED to find max joltage")
+        }
+        Some(actual) => assert_eq!(expected, actual),
+    }
+}
+
+#[test]
+fn check_ascending_12() {
+    let ss = String::from("1234567899999999");
+    let s: &str = ss.as_str();
+    let bb = BatteryBank::new(s);
+    let expected: u64 = 567899999999;
+    match bb.max_joltage(12) {
+        None => {
+            assert!(false, "FAILED to find max joltage")
+        }
+        Some(actual) => assert_eq!(expected, actual),
+    }
+}
+
+#[test]
+fn check_ascending_descending_12() {
+    let ss = String::from("1234567898765432");
+    let s: &str = ss.as_str();
+    let bb = BatteryBank::new(s);
+    let expected: u64 = 567898765432;
+    match bb.max_joltage(12) {
+        None => {
+            assert!(false, "FAILED to find max joltage")
+        }
+        Some(actual) => assert_eq!(expected, actual),
+    }
+}
+
+#[test]
+fn check_descending_12() {
+    let ss = String::from("9876543219876543");
+    let s: &str = ss.as_str();
+    let bb = BatteryBank::new(s);
+    let expected: u64 = 987659876543;
+    match bb.max_joltage(12) {
+        None => {
+            assert!(false, "FAILED to find max joltage")
+        }
+        Some(actual) => assert_eq!(expected, actual),
+    }
+}
+
+#[test]
+fn check_last_biggest_12() {
+    let ss = String::from("8181568765432119");
+    let s: &str = ss.as_str();
+    let bb = BatteryBank::new(s);
+    let expected: u64 = 888765432119;
+    match bb.max_joltage(12) {
         None => {
             assert!(false, "FAILED to find max joltage")
         }

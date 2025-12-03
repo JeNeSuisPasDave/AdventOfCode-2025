@@ -127,3 +127,11 @@ taking a break ...
 **10:32**
 
 specs updated. taking another break ...
+
+**14:25**
+
+Started work again. Implemented a nice helper function and a much cleaner way of doing it. The new solution allows a choice of the number of batteries to be selected and then selects that number, from the given bank, that will give the largest joltage.
+
+A much more elegant solution than the Part 1 mess. And fewer LOC as well.
+
+It passes unit tests and the example, so I'm ready to try the downloaded data.
