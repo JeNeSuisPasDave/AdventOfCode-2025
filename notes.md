@@ -55,7 +55,7 @@ The answer was submitted and confirmed to be correct. Done with Day 1. Woot!
 
 *Tuesday, 2025-12-02*
 
-*08:00*
+**08:00**
 
 I setup the project with part 1 specs, example data, and input data.
 
@@ -87,4 +87,16 @@ I didn't write any unit tests this time. I probably should have,
 but got lucky in that the example data provided a sufficient
 test run to catch all the bugs that could have shown up when
 processing the "real" input data.
+
+## Day 3
+
+*Wednesday, 2025-01-03*
+
+**07:10**
+
+I setup the project with part 1 specs, example data, and input data.
+
+Next I'll add the CLI wrapper and file reading logic, borrowing heavily from previous days.
+
+
 
