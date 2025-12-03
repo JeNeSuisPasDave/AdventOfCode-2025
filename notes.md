@@ -105,3 +105,16 @@ Implemented the boiler plate for reading the input file and accumulating the max
 **08:52**
 
 Implemented and passing unit tests. Next need to test with example data.
+
+**08:55**
+
+It failed with the example data. I got a total of 354 instead of 357. Sigh. Now I need to troubleshoot (and write a unit test for the failing case).
+
+**09:01**
+
+So the problem was that I thought it could pick the batteries in any order ... e.g. "8917" would have a max of 98, but actually it has to be in sequence, so "8917" would have a max of 97.
+
+**09:58**
+
+Solved the problem and added more tests. I got the correct answer from the example data.
+
