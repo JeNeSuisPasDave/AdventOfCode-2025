@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
@@ -53,6 +54,7 @@ impl IdRange {
     //
     fn invalid_ids(&self) -> Vec<u64> {
         let mut result: Vec<u64> = Vec::new();
+        let mut set: HashSet<u64> = HashSet::new();
 
         // start with a pattern size of a single digit
         //
@@ -82,7 +84,10 @@ impl IdRange {
                     num = (num * pattern_inc) + pattern_num;
                 }
                 while num <= self.end {
-                    result.push(num);
+                    if !set.contains(&num) {
+                        result.push(num);
+                        set.insert(num);
+                    }
                     num = (num * pattern_inc) + pattern_num;
                 }
             }
@@ -178,13 +183,13 @@ fn main() -> Result<()> {
             }
             let idr = idr.unwrap();
             for invalid_id in idr.invalid_ids() {
-                println!("Invalid ID: {}", invalid_id);
+                // println!("Invalid ID: {}", invalid_id);
                 invalid_id_accum += invalid_id;
             }
-            println!(
-                "Range: {}-{}; accum: {}",
-                idr.start, idr.end, invalid_id_accum
-            );
+            // println!(
+            //     "Range: {}-{}; accum: {}",
+            //     idr.start, idr.end, invalid_id_accum
+            // );
         }
     }
     if s.len() > 0 {
@@ -194,13 +199,13 @@ fn main() -> Result<()> {
         if idr.is_some() {
             let idr = idr.unwrap();
             for invalid_id in idr.invalid_ids() {
-                println!("Invalid ID: {}", invalid_id);
+                // println!("Invalid ID: {}", invalid_id);
                 invalid_id_accum += invalid_id;
             }
-            println!(
-                "Range: {}-{}; accum: {}",
-                idr.start, idr.end, invalid_id_accum
-            );
+            // println!(
+            //     "Range: {}-{}; accum: {}",
+            //     idr.start, idr.end, invalid_id_accum
+            // );
         }
     }
     println!("Sum of invalid_ids: {}", invalid_id_accum);

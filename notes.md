@@ -79,4 +79,12 @@ I completed Part 1 and submitted the correct solution.
 I ran into problems with overflow and needed to accumulate
 into a u64 instead of a u32.
 
+**18:04**
+
+I completed Part 2 and submitted the correct solution.
+
+I didn't write any unit tests this time. I probably should have,
+but got lucky in that the example data provided a sufficient
+test run to catch all the bugs that could have shown up when
+processing the "real" input data.
 
