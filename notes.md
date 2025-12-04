@@ -166,4 +166,10 @@ I added a unit test to produce the error, but the test isn't actually checking t
 
 Implemented some unit tests to check for errors when invalid chars in the input file or when inconsistent line lengths are in the input file. And I implemented the code to add all the grid rows found in the input.
 
+**12:40**
 
+Resuming work on the puzzle.
+
+**14:13**
+
+Got implementation done. Unit tests working, and got correct answer with example input. About to try actual input file.

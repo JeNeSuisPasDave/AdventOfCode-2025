@@ -122,6 +122,91 @@ impl PaperRollGrid {
         }
         Ok(roll_count)
     }
+
+    // For the cell at (row_idx, col_idx), count the neighboring
+    // cells that contain rolls.
+    //
+    // Returns None if cell is not within the grid; returns
+    // Some(count) where count is the number of neighboring cells
+    // containing a roll of paper.
+    //
+    fn count_neighboring_rolls(
+        &self,
+        row_idx: u32,
+        col_idx: u32,
+    ) -> Option<u32> {
+        // check whether cell is within the grid
+        //
+        if (row_idx >= self.row_count) || (col_idx >= self.col_count) {
+            return None;
+        }
+        let mut roll_count: u32 = 0;
+        //
+        // look at neighbors above
+        //
+        if row_idx > 0 {
+            let ridx: u32 = row_idx - 1;
+            let cidx_from: u32 =
+                if col_idx > 0 { col_idx - 1 } else { col_idx };
+            let cidx_to: u32 = if col_idx == (self.col_count - 1) {
+                col_idx
+            } else {
+                col_idx + 1
+            };
+            for cidx in cidx_from..=cidx_to {
+                if self.has_roll(&ridx, &cidx) {
+                    roll_count += 1;
+                }
+            }
+        }
+        //
+        // look at neighbors on each side
+        //
+        let ridx: u32 = row_idx;
+        if col_idx > 0 {
+            let cidx: u32 = col_idx - 1;
+            if self.has_roll(&ridx, &cidx) {
+                roll_count += 1;
+            }
+        }
+        if col_idx < (self.col_count - 1) {
+            let cidx: u32 = col_idx + 1;
+            if self.has_roll(&ridx, &cidx) {
+                roll_count += 1;
+            }
+        }
+        //
+        // look at neighbors below
+        //
+        if row_idx < (self.row_count - 1) {
+            let ridx: u32 = row_idx + 1;
+            let cidx_from: u32 =
+                if col_idx > 0 { col_idx - 1 } else { col_idx };
+            let cidx_to: u32 = if col_idx == (self.col_count - 1) {
+                col_idx
+            } else {
+                col_idx + 1
+            };
+            for cidx in cidx_from..=cidx_to {
+                if self.has_roll(&ridx, &cidx) {
+                    roll_count += 1;
+                }
+            }
+        }
+        //
+        // Get out
+        //
+        Some(roll_count)
+    }
+
+    // Get the cell value
+    //
+    // Will panic if cell coordinates are not within the grid.
+    //
+    fn has_roll(&self, row_idx: &u32, col_idx: &u32) -> bool {
+        let row = self.rows.get(row_idx).unwrap();
+        *row.get(col_idx).unwrap()
+    }
 }
 
 // Binary crate entry point
@@ -145,12 +230,56 @@ fn main() -> Result<()> {
         _ = grid.add_next_row(line)?;
     }
     let _ = grid.row_count;
+    let mut accessible_rolls: u32 = 0;
+    for ridx in 0..grid.row_count {
+        for cidx in 0..grid.col_count {
+            if grid.has_roll(&ridx, &cidx) {
+                if 4 > grid.count_neighboring_rolls(ridx, cidx).unwrap()
+                {
+                    accessible_rolls += 1;
+                }
+            }
+        }
+    }
 
     println!(
         "The number of rolls accessible by a forklift is {}",
-        "unknown"
+        accessible_rolls
     );
     Ok(())
+}
+
+// PaperRollGrid test helpers
+//
+// ..@@...@
+// @..@@...
+// .@..@@..
+// ...@..@@
+// @...@..@
+// @@...@..
+//
+#[cfg(test)]
+fn testhelper_make_grid01() -> PaperRollGrid {
+    let mut grid = PaperRollGrid::new();
+    let ss = String::from("..@@...@");
+    let s: &str = ss.as_str();
+    let _rolls = grid.add_next_row(s).unwrap();
+    let ss = String::from("@..@@...");
+    let s: &str = ss.as_str();
+    let _rolls = grid.add_next_row(s).unwrap();
+    let ss = String::from(".@..@@..");
+    let s: &str = ss.as_str();
+    let _rolls = grid.add_next_row(s).unwrap();
+    let ss = String::from("...@..@@");
+    let s: &str = ss.as_str();
+    let _rolls = grid.add_next_row(s).unwrap();
+    let ss = String::from("@...@..@");
+    let s: &str = ss.as_str();
+    let _rolls = grid.add_next_row(s).unwrap();
+    let ss = String::from("@@...@..");
+    let s: &str = ss.as_str();
+    let _rolls = grid.add_next_row(s).unwrap();
+    grid
 }
 
 // PaperRollGrid tests
@@ -206,4 +335,160 @@ fn adding_row_of_different_length() {
     let ss = String::from("..@@...@@@");
     let s: &str = ss.as_str();
     let _rolls = grid.add_next_row(s).unwrap();
+}
+
+// ..@@...@
+// @..@@...
+// .@..@@..
+// ...@..@@
+// @...@..@
+// @@...@..
+#[test]
+fn count_neighbors_grid01_r0c0() {
+    let grid: PaperRollGrid = testhelper_make_grid01();
+    let expected_count: u32 = 1;
+    let actual_count = grid.count_neighboring_rolls(0, 0).unwrap();
+    assert_eq!(expected_count, actual_count);
+}
+#[test]
+fn count_neighbors_grid01_r0c1() {
+    let grid: PaperRollGrid = testhelper_make_grid01();
+    let expected_count: u32 = 2;
+    let actual_count = grid.count_neighboring_rolls(0, 1).unwrap();
+    assert_eq!(expected_count, actual_count);
+}
+#[test]
+fn count_neighbors_grid01_r0c6() {
+    let grid: PaperRollGrid = testhelper_make_grid01();
+    let expected_count: u32 = 1;
+    let actual_count = grid.count_neighboring_rolls(0, 6).unwrap();
+    assert_eq!(expected_count, actual_count);
+}
+#[test]
+fn count_neighbors_grid01_r0c7() {
+    let grid: PaperRollGrid = testhelper_make_grid01();
+    let expected_count: u32 = 0;
+    let actual_count = grid.count_neighboring_rolls(0, 7).unwrap();
+    assert_eq!(expected_count, actual_count);
+}
+// ..@@...@
+// @..@@...
+// .@..@@..
+// ...@..@@
+// @...@..@
+// @@...@..
+#[test]
+#[should_panic]
+fn count_neighbors_grid01_r6c0() {
+    let grid: PaperRollGrid = testhelper_make_grid01();
+    let actual_count = grid.count_neighboring_rolls(6, 0).unwrap();
+}
+#[test]
+#[should_panic]
+fn count_neighbors_grid01_r0c8() {
+    let grid: PaperRollGrid = testhelper_make_grid01();
+    let actual_count = grid.count_neighboring_rolls(0, 8).unwrap();
+}
+#[test]
+#[should_panic]
+fn count_neighbors_grid01_r6c8() {
+    let grid: PaperRollGrid = testhelper_make_grid01();
+    let actual_count = grid.count_neighboring_rolls(6, 8).unwrap();
+}
+
+#[test]
+fn count_neighbors_grid01_r1c0() {
+    let grid: PaperRollGrid = testhelper_make_grid01();
+    let expected_count: u32 = 1;
+    let actual_count = grid.count_neighboring_rolls(1, 0).unwrap();
+    assert_eq!(expected_count, actual_count);
+}
+#[test]
+fn count_neighbors_grid01_r1c1() {
+    let grid: PaperRollGrid = testhelper_make_grid01();
+    let expected_count: u32 = 3;
+    let actual_count = grid.count_neighboring_rolls(1, 1).unwrap();
+    assert_eq!(expected_count, actual_count);
+}
+#[test]
+fn count_neighbors_grid01_r1c6() {
+    let grid: PaperRollGrid = testhelper_make_grid01();
+    let expected_count: u32 = 2;
+    let actual_count = grid.count_neighboring_rolls(1, 6).unwrap();
+    assert_eq!(expected_count, actual_count);
+}
+#[test]
+fn count_neighbors_grid01_r1c7() {
+    let grid: PaperRollGrid = testhelper_make_grid01();
+    let expected_count: u32 = 1;
+    let actual_count = grid.count_neighboring_rolls(1, 7).unwrap();
+    assert_eq!(expected_count, actual_count);
+}
+// ..@@...@
+// @..@@...
+// .@..@@..
+// ...@..@@
+// @...@..@
+// @@...@..
+#[test]
+fn count_neighbors_grid01_r4c0() {
+    let grid: PaperRollGrid = testhelper_make_grid01();
+    let expected_count: u32 = 2;
+    let actual_count = grid.count_neighboring_rolls(4, 0).unwrap();
+    assert_eq!(expected_count, actual_count);
+}
+#[test]
+fn count_neighbors_grid01_r4c1() {
+    let grid: PaperRollGrid = testhelper_make_grid01();
+    let expected_count: u32 = 3;
+    let actual_count = grid.count_neighboring_rolls(4, 1).unwrap();
+    assert_eq!(expected_count, actual_count);
+}
+#[test]
+fn count_neighbors_grid01_r4c6() {
+    let grid: PaperRollGrid = testhelper_make_grid01();
+    let expected_count: u32 = 4;
+    let actual_count = grid.count_neighboring_rolls(4, 6).unwrap();
+    assert_eq!(expected_count, actual_count);
+}
+#[test]
+fn count_neighbors_grid01_r4c7() {
+    let grid: PaperRollGrid = testhelper_make_grid01();
+    let expected_count: u32 = 2;
+    let actual_count = grid.count_neighboring_rolls(4, 7).unwrap();
+    assert_eq!(expected_count, actual_count);
+}
+// ..@@...@
+// @..@@...
+// .@..@@..
+// ...@..@@
+// @...@..@
+// @@...@..
+#[test]
+fn count_neighbors_grid01_r5c0() {
+    let grid: PaperRollGrid = testhelper_make_grid01();
+    let expected_count: u32 = 2;
+    let actual_count = grid.count_neighboring_rolls(5, 0).unwrap();
+    assert_eq!(expected_count, actual_count);
+}
+#[test]
+fn count_neighbors_grid01_r5c1() {
+    let grid: PaperRollGrid = testhelper_make_grid01();
+    let expected_count: u32 = 2;
+    let actual_count = grid.count_neighboring_rolls(5, 1).unwrap();
+    assert_eq!(expected_count, actual_count);
+}
+#[test]
+fn count_neighbors_grid01_r5c6() {
+    let grid: PaperRollGrid = testhelper_make_grid01();
+    let expected_count: u32 = 2;
+    let actual_count = grid.count_neighboring_rolls(5, 6).unwrap();
+    assert_eq!(expected_count, actual_count);
+}
+#[test]
+fn count_neighbors_grid01_r5c7() {
+    let grid: PaperRollGrid = testhelper_make_grid01();
+    let expected_count: u32 = 1;
+    let actual_count = grid.count_neighboring_rolls(5, 7).unwrap();
+    assert_eq!(expected_count, actual_count);
 }
