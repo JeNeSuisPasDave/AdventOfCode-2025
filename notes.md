@@ -162,4 +162,8 @@ see https://notes.kodekloud.com/docs/Rust-Programming/Collections-Error-Handling
 
 I added a unit test to produce the error, but the test isn't actually checking that an error took place.
 
+**07:30**
+
+Implemented some unit tests to check for errors when invalid chars in the input file or when inconsistent line lengths are in the input file. And I implemented the code to add all the grid rows found in the input.
+
 
