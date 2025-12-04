@@ -43,6 +43,13 @@ impl fmt::Display for PaperRollGridError {
 
 impl std::error::Error for PaperRollGridError {}
 
+// The coordinates of a cell in the grid
+//
+struct GridCell {
+    row_idx: u32,
+    col_idx: u32,
+}
+
 struct PaperRollGrid {
     // A collection of rows indexed by zero-based row number.
     // Each row is a collection of cells indexed by zero-based
@@ -207,6 +214,18 @@ impl PaperRollGrid {
         let row = self.rows.get(row_idx).unwrap();
         *row.get(col_idx).unwrap()
     }
+
+    // Set the cell value to false
+    //
+    // Will panic if cell coordinates are not within the grid.
+    //
+    fn remove_rolls(&mut self, cells: &Vec<GridCell>) {
+        for cell in cells {
+            let row = self.rows.get_mut(&cell.row_idx).unwrap();
+            let grid_cell = row.get_mut(&cell.col_idx).unwrap();
+            *grid_cell = false;
+        }
+    }
 }
 
 // Binary crate entry point
@@ -221,6 +240,8 @@ fn main() -> Result<()> {
     let rdr = BufReader::new(f);
     let lines = rdr.lines();
 
+    // populate the grid
+    //
     let mut grid = PaperRollGrid::new();
     for line in lines {
         let line = line.with_context(|| {
@@ -229,21 +250,42 @@ fn main() -> Result<()> {
         let line = line.trim();
         _ = grid.add_next_row(line)?;
     }
-    let _ = grid.row_count;
+    //
+    // check the rolls to see if they are removable
+    // keep trying as long as removeable rolls remain
+    //
     let mut accessible_rolls: u32 = 0;
-    for ridx in 0..grid.row_count {
-        for cidx in 0..grid.col_count {
-            if grid.has_roll(&ridx, &cidx) {
-                if 4 > grid.count_neighboring_rolls(ridx, cidx).unwrap()
-                {
-                    accessible_rolls += 1;
+    loop {
+        let mut removeable_rolls: Vec<GridCell> = Vec::new();
+        for ridx in 0..grid.row_count {
+            for cidx in 0..grid.col_count {
+                if grid.has_roll(&ridx, &cidx) {
+                    if 4 > grid
+                        .count_neighboring_rolls(ridx, cidx)
+                        .unwrap()
+                    {
+                        removeable_rolls.push(GridCell {
+                            row_idx: ridx,
+                            col_idx: cidx,
+                        });
+                        accessible_rolls += 1;
+                    }
                 }
             }
         }
+        //
+        // Remove the accessible rolls
+        //
+        if 0 == removeable_rolls.len() {
+            break;
+        }
+        grid.remove_rolls(&removeable_rolls);
     }
 
+    // Display the total rolls removed
+    //
     println!(
-        "The number of rolls accessible by a forklift is {}",
+        "The number of rolls removeable by forklift is {}",
         accessible_rolls
     );
     Ok(())

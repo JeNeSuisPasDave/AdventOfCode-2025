@@ -173,3 +173,9 @@ Resuming work on the puzzle.
 **14:13**
 
 Got implementation done. Unit tests working, and got correct answer with example input. About to try actual input file.
+
+**14:51**
+
+I submitted the Part 1 answer and it was correct. I worked on Part 2, which I was suprised to find not that much of an extension from what I did in Part 1.
+
+Finished the implementation. Learned more about mutability in Rust. It ran a couple seconds on the input data, which makes me think I could have made this more efficient. For now, though, it is enough to have submitted a correct answer for Part 2 and earned my gold stars.
