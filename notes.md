@@ -142,3 +142,11 @@ I ran the data and posted the answer. It was correct. I shared on bsky.app and t
 
 Woot!
 
+## Day 4
+
+*Thursday, 2025-12-04*
+
+**01:34**
+
+I created the `day04` project and added the specs and example input. And then I added CLI boilerplate. Next step is to implement a "grid" struct and populate it from the input file.
+
