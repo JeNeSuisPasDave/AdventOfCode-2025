@@ -150,3 +150,16 @@ Woot!
 
 I created the `day04` project and added the specs and example input. And then I added CLI boilerplate. Next step is to implement a "grid" struct and populate it from the input file.
 
+**03:07**
+
+I'm working on populating the grid struct, but am getting bogged down trying to report an Err with a formatted string. I can do Err("wat") but not Err("wat {}", some_value). I'll just us a plain string and move on.
+
+**04:07**
+
+I tried creating and using a custom error type. I'm working through that now, but need to take a break. 
+
+see https://notes.kodekloud.com/docs/Rust-Programming/Collections-Error-Handling/Creating-Custom-Error-Types
+
+I added a unit test to produce the error, but the test isn't actually checking that an error took place.
+
+
