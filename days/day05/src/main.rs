@@ -99,39 +99,48 @@ impl IngredientDB {
 
     // check whether the ingredient is known to be fresh
     //
-    fn is_fresh(&self, id: u64) -> bool {
-        println!("Checking freshness of {}", id);
+    fn is_fresh(&self, id: u64, brute_force: bool) -> bool {
+        // println!("Checking freshness of {}", id);
         let mut result: bool = false;
-        // iterator for all ranges that start at or below the id
-        //
-        let up_bounds = (Unbounded, Included(id));
-        let up_from = self.fresh_ranges_by_start.range(up_bounds);
-        //
-        // iterator for all ranges that end at or above the id
-        //
-        let down_bounds = (Included(id), Unbounded);
-        let down_to = self.fresh_ranges_by_start.range(down_bounds);
-        //
-        //
-        for thing in up_from {
-            let (_, range_idx): (&u64, &usize) = thing;
-            println!("Checking up_from at idx {0}", range_idx);
-            let val: &IngredientRange =
-                self.ranges.get(*range_idx).unwrap();
-            if val.contains(id) {
-                result = true;
-                break;
+        if brute_force {
+            for thing in self.ranges.iter() {
+                if thing.contains(id) {
+                    result = true;
+                    break;
+                }
             }
-        }
-        if !result {
-            for thing in down_to {
+        } else {
+            // iterator for all ranges that start at or below the id
+            //
+            let up_bounds = (Unbounded, Included(id));
+            let up_from = self.fresh_ranges_by_start.range(up_bounds);
+            //
+            // iterator for all ranges that end at or above the id
+            //
+            let down_bounds = (Included(id), Unbounded);
+            let down_to = self.fresh_ranges_by_start.range(down_bounds);
+            //
+            //
+            for thing in up_from {
                 let (_, range_idx): (&u64, &usize) = thing;
-                println!("Checking down_to at idx {0}", range_idx);
+                // println!("Checking up_from at idx {0}", range_idx);
                 let val: &IngredientRange =
                     self.ranges.get(*range_idx).unwrap();
                 if val.contains(id) {
                     result = true;
                     break;
+                }
+            }
+            if !result {
+                for thing in down_to {
+                    let (_, range_idx): (&u64, &usize) = thing;
+                    // println!("Checking down_to at idx {0}", range_idx);
+                    let val: &IngredientRange =
+                        self.ranges.get(*range_idx).unwrap();
+                    if val.contains(id) {
+                        result = true;
+                        break;
+                    }
                 }
             }
         }
@@ -155,6 +164,9 @@ fn main() -> Result<()> {
     // that, read in the ranges until a blank line is encountered
     //
     let mut fresh_ingredient_count: u64 = 0;
+    let mut total_range_count: u64 = 0;
+    let mut total_ingredient_count: u64 = 0;
+    let mut spoiled_ingredient_count: u64 = 0;
     let mut db = IngredientDB::new();
     let mut process_ids: bool = false;
     for line in lines {
@@ -167,6 +179,7 @@ fn main() -> Result<()> {
             continue;
         }
         if !process_ids {
+            total_range_count += 1;
             // process ranges
             //
             let parts: Vec<&str> = line.split('-').collect();
@@ -174,12 +187,14 @@ fn main() -> Result<()> {
             let end: u64 = parts.get(1).unwrap().parse().unwrap();
             db.add_range(start, end);
         } else {
+            total_ingredient_count += 1;
             let id: u64 = line.parse().unwrap();
-            if db.is_fresh(id) {
+            if db.is_fresh(id, true) {
                 fresh_ingredient_count += 1;
-                println!("FRESH: {}", id);
+                // println!("FRESH: {}", id);
             } else {
-                println!("spoiled: {}", id);
+                spoiled_ingredient_count += 1;
+                // println!("spoiled: {}", id);
             }
         }
     }
@@ -187,8 +202,17 @@ fn main() -> Result<()> {
     // Display the total number of fresh ingredients
     //
     println!(
-        "Thecount of fresh ingredients is {}",
+        "The count of fresh ingredients is {}",
         fresh_ingredient_count
     );
+    println!(
+        "The count of spoiled ingredients is {}",
+        spoiled_ingredient_count
+    );
+    println!(
+        "The count of total ingredients is {}",
+        total_ingredient_count
+    );
+    println!("The count of ranges is {}", total_range_count);
     Ok(())
 }
