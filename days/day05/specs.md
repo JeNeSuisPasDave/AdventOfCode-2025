@@ -37,6 +37,7 @@ So, in this example, **3** of the available ingredient IDs are fresh.
 
 Process the database file from the new inventory management system. **How many of the available ingredient IDs are fresh?**
 
+
 Your puzzle answer was 701.
 
 The first half of this puzzle is complete! It provides one gold star: *
@@ -45,7 +46,7 @@ The first half of this puzzle is complete! It provides one gold star: *
 
 The Elves start bringing their spoiled inventory to the trash chute at the back of the kitchen.
 
-So that they can stop bugging you when they get new inventory, the Elves would like to know **all** of the IDs that the **fresh ingredient ID ranges** consider to be **fresh**. An ingredient ID is still considered fresh if it is in any range.
+So that they can stop bugging you when they get new inventory, the Elves would like to know **all** of the IDs that the **fresh ingredient ID ranges** consider to be **fresh**. An ingredient ID is still considered fresh if it is in **any** range.
 
 Now, the second section of the database (the available ingredient IDs) is irrelevant. Here are the fresh ingredient ID ranges from the above example:
 

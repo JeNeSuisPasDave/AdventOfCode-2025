@@ -1,7 +1,5 @@
-use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
-use std::ops::Bound::{Included, Unbounded};
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
@@ -43,6 +41,15 @@ impl IngredientRange {
         }
     }
 
+    // copy constructor
+    //
+    fn copy(&self) -> Self {
+        IngredientRange {
+            start: self.start,
+            end: self.end,
+        }
+    }
+
     // Returns true if id is within the range; otherwise false
     //
     fn contains(&self, id: u64) -> bool {
@@ -54,6 +61,53 @@ impl IngredientRange {
             true
         }
     }
+
+    fn overlaps_range(&self, other: &IngredientRange) -> bool {
+        if (other.start >= self.start)
+            && (other.start <= self.end)
+            && (other.end > self.end)
+        {
+            true
+        } else if (other.end >= self.start)
+            && (other.end <= self.end)
+            && (other.start < self.start)
+        {
+            true
+        } else {
+            false
+        }
+    }
+
+    fn contains_range(&self, other: &IngredientRange) -> bool {
+        if (other.start >= self.start)
+            && (other.start <= self.end)
+            && (other.end >= self.start)
+            && (other.end <= self.end)
+        {
+            true
+        } else {
+            false
+        }
+    }
+
+    fn contained_by_range(&self, other: &IngredientRange) -> bool {
+        if (self.start >= other.start)
+            && (self.start <= other.end)
+            && (self.end >= other.start)
+            && (self.end <= other.end)
+        {
+            true
+        } else {
+            false
+        }
+    }
+
+    fn merge_with(&mut self, other: &IngredientRange) {
+        let new_start = u64::min(self.start, other.start);
+        let new_end = u64::max(self.end, other.end);
+        self.start = new_start;
+        self.end = new_end;
+    }
 }
 
 // models an ingredient database
@@ -61,13 +115,8 @@ impl IngredientRange {
 struct IngredientDB {
     // A list of ingredient ranges in the order added
     //
-    ranges: Vec<IngredientRange>,
-    // A list of ingredient ranges sorted by starting ID
-    //
-    fresh_ranges_by_start: BTreeMap<u64, usize>,
-    // A list of ingredient ranges sorted by ending ID
-    //
-    fresh_ranges_by_end: BTreeMap<u64, usize>,
+    original_ranges: Vec<IngredientRange>,
+    merged_ranges: Vec<IngredientRange>,
 }
 
 // functions associated with IngredientDB
@@ -76,13 +125,11 @@ impl IngredientDB {
     // constructor
     //
     fn new() -> Self {
-        let list: Vec<IngredientRange> = Vec::new();
-        let dict_by_start: BTreeMap<u64, usize> = BTreeMap::new();
-        let dict_by_end: BTreeMap<u64, usize> = BTreeMap::new();
+        let list1: Vec<IngredientRange> = Vec::new();
+        let list2: Vec<IngredientRange> = Vec::new();
         IngredientDB {
-            ranges: list,
-            fresh_ranges_by_start: dict_by_start,
-            fresh_ranges_by_end: dict_by_end,
+            original_ranges: list1,
+            merged_ranges: list2,
         }
     }
 
@@ -90,61 +137,60 @@ impl IngredientDB {
     //
     fn add_range(&mut self, start: u64, end: u64) {
         let ir = IngredientRange::new(start, end);
-        self.ranges.push(ir);
-        let idx: usize = self.ranges.len().try_into().unwrap();
-        let range_idx: usize = idx - 1;
-        self.fresh_ranges_by_start.insert(start, range_idx);
-        self.fresh_ranges_by_end.insert(end, range_idx);
+        self.original_ranges.push(ir);
+        let ir = IngredientRange::new(start, end);
+        self.update_merged_ranges(&ir);
     }
 
     // check whether the ingredient is known to be fresh
     //
-    fn is_fresh(&self, id: u64, brute_force: bool) -> bool {
+    fn is_fresh(&self, id: u64) -> bool {
         // println!("Checking freshness of {}", id);
         let mut result: bool = false;
-        if brute_force {
-            for thing in self.ranges.iter() {
-                if thing.contains(id) {
-                    result = true;
-                    break;
-                }
-            }
-        } else {
-            // iterator for all ranges that start at or below the id
-            //
-            let up_bounds = (Unbounded, Included(id));
-            let up_from = self.fresh_ranges_by_start.range(up_bounds);
-            //
-            // iterator for all ranges that end at or above the id
-            //
-            let down_bounds = (Included(id), Unbounded);
-            let down_to = self.fresh_ranges_by_start.range(down_bounds);
-            //
-            //
-            for thing in up_from {
-                let (_, range_idx): (&u64, &usize) = thing;
-                // println!("Checking up_from at idx {0}", range_idx);
-                let val: &IngredientRange =
-                    self.ranges.get(*range_idx).unwrap();
-                if val.contains(id) {
-                    result = true;
-                    break;
-                }
-            }
-            if !result {
-                for thing in down_to {
-                    let (_, range_idx): (&u64, &usize) = thing;
-                    // println!("Checking down_to at idx {0}", range_idx);
-                    let val: &IngredientRange =
-                        self.ranges.get(*range_idx).unwrap();
-                    if val.contains(id) {
-                        result = true;
-                        break;
-                    }
-                }
+        for thing in self.merged_ranges.iter() {
+            if thing.contains(id) {
+                result = true;
+                break;
             }
         }
         result
+    }
+
+    fn update_merged_ranges(&mut self, ir: &IngredientRange) {
+        let mut ir_was_merged: bool = false;
+        let mut unchanged_ranges: Vec<IngredientRange> = Vec::new();
+        let mut new_range: IngredientRange = ir.copy();
+        for thing in self.merged_ranges.iter() {
+            if thing.contains_range(&new_range)
+                || thing.contained_by_range(&new_range)
+                || thing.overlaps_range(&new_range)
+            {
+                ir_was_merged = true;
+                let mut merged_range = thing.copy();
+                merged_range.merge_with(&new_range);
+                new_range = merged_range.copy();
+            } else {
+                unchanged_ranges.push(thing.copy());
+            }
+        }
+        //
+        // update the merged_ranges collection
+        //
+        if !ir_was_merged {
+            // new range was not merged, so add it to the list
+            //
+            self.merged_ranges.push(ir.copy());
+        } else {
+            // one or more ranges were merged, so recreated
+            // the merged_range collection by assemblying the
+            // unchanged ranges and the new merged range
+            //
+            self.merged_ranges = Vec::new();
+            for ur in unchanged_ranges {
+                self.merged_ranges.push(ur);
+            }
+            self.merged_ranges.push(new_range);
+        }
     }
 }
 
@@ -189,7 +235,7 @@ fn main() -> Result<()> {
         } else {
             total_ingredient_count += 1;
             let id: u64 = line.parse().unwrap();
-            if db.is_fresh(id, true) {
+            if db.is_fresh(id) {
                 fresh_ingredient_count += 1;
                 // println!("FRESH: {}", id);
             } else {
@@ -198,6 +244,16 @@ fn main() -> Result<()> {
             }
         }
     }
+
+    // Calculate total possible fresh ingredients
+    //
+    let mut total_possible_fresh_ingredients: u64 = 0;
+    for ir in db.merged_ranges.iter() {
+        let size_of_range: u64 = (ir.end + 1) - ir.start;
+        total_possible_fresh_ingredients += size_of_range;
+    }
+    let total_merged_ranges: u64 =
+        db.merged_ranges.len().try_into().unwrap();
 
     // Display the total number of fresh ingredients
     //
@@ -214,5 +270,10 @@ fn main() -> Result<()> {
         total_ingredient_count
     );
     println!("The count of ranges is {}", total_range_count);
+    println!("The count of merged ranges is {}", total_merged_ranges);
+    println!(
+        "The total possible fresh ingredients is {}",
+        total_possible_fresh_ingredients
+    );
     Ok(())
 }
