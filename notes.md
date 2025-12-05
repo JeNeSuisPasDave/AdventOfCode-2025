@@ -194,4 +194,9 @@ Capturing the specs, setting up the project with CLI wrapper.
 
 *Note: about day04, I think the impl would have been faster if I had maintained a list of cells containing rolls and only examined those cells each iteration (obviously removing cells from the list when rolls were removed from the grid). I may try it. Also I should figure out how to time my execution so I can verify performance improvements.*
 
+**09:27**
+
+I finished part 1. I had some clever way of reducing the search space, but it has some kind of bug that prevented me from finding a containing range for some of the ingredient IDs. I got 672 with my clever solution. The correct answer is 701, which I found by doing a brute force search (looking at each range in the order of input).
+
+I'll debug it later. For now I need to move on to Part 2.
 
