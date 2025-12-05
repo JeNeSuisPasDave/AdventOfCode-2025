@@ -18,3 +18,8 @@ target
 # Contains mutation testing data
 #
 **/mutants.out*/
+
+# trash folders contain test output and other temp files
+# 
+trash
+
