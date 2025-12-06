@@ -15,12 +15,109 @@ struct Cli {
     path: PathBuf,
 }
 
+#[derive(Debug)]
 enum CephMathOperation {
     Add,
     Multiply,
     Unknown,
 }
 
+#[derive(Debug)]
+enum InputColumnKind {
+    Empty,
+    Number,
+    NumberAndOperation,
+}
+
+#[derive(Debug)]
+struct InputColumn {
+    chars: Vec<char>,
+    op_char: char,
+    kind: InputColumnKind,
+}
+
+impl InputColumn {
+    fn new() -> Self {
+        let chars: Vec<char> = Vec::new();
+        InputColumn {
+            chars: chars,
+            op_char: ' ',
+            kind: InputColumnKind::Empty,
+        }
+    }
+
+    fn add_token(&mut self, token: &char) {
+        let c: char = *token;
+        if c.is_digit(10) {
+            self.chars.push(c);
+            self.kind = InputColumnKind::Number
+        } else if c == '+' || c == '*' {
+            self.op_char = c;
+            if std::mem::discriminant(&self.kind)
+                == std::mem::discriminant(&InputColumnKind::Number)
+            {
+                self.kind = InputColumnKind::NumberAndOperation;
+            } else {
+                panic!("Operation without preceding number in column");
+            }
+        } else if c == ' ' || c == '\t' {
+        } else {
+            panic!("Unrecognized character '{}'", c);
+        }
+    }
+
+    fn get_value(&self) -> Option<i64> {
+        match self.kind {
+            InputColumnKind::Empty => None,
+            InputColumnKind::Number
+            | InputColumnKind::NumberAndOperation => {
+                let s = self.chars.iter().cloned().collect::<String>();
+                let s = s.trim();
+                let v: i64 = s.parse::<i64>().unwrap();
+                Some(v)
+            }
+        }
+    }
+
+    fn get_operation(&self) -> Option<CephMathOperation> {
+        match self.kind {
+            InputColumnKind::Empty | InputColumnKind::Number => None,
+            InputColumnKind::NumberAndOperation => match self.op_char {
+                '+' => Some(CephMathOperation::Add),
+                '*' => Some(CephMathOperation::Multiply),
+                _ => {
+                    panic!("Column has invalid operation");
+                }
+            },
+        }
+    }
+}
+
+#[derive(Debug)]
+struct InputColumns {
+    columns: BTreeMap<u64, InputColumn>,
+}
+
+impl InputColumns {
+    fn new() -> Self {
+        let columns: BTreeMap<u64, InputColumn> = BTreeMap::new();
+        InputColumns { columns: columns }
+    }
+
+    fn add_columns(&mut self, line: &str) {
+        let mut idx: u64 = 0;
+        for c in line.chars() {
+            if !self.columns.contains_key(&idx) {
+                let column: InputColumn = InputColumn::new();
+                self.columns.insert(idx, column);
+            }
+            self.columns.get_mut(&idx).unwrap().add_token(&c);
+            idx += 1;
+        }
+    }
+}
+
+#[derive(Debug)]
 struct CephMathProblem {
     operation: CephMathOperation,
     terms: Vec<i64>,
@@ -71,8 +168,8 @@ impl CephMathProblem {
     }
 }
 
+#[derive(Debug)]
 struct CephMathProblemSet {
-    count: u64,
     problems: BTreeMap<u64, CephMathProblem>,
 }
 
@@ -81,20 +178,50 @@ impl CephMathProblemSet {
     //
     fn new() -> Self {
         let problems: BTreeMap<u64, CephMathProblem> = BTreeMap::new();
-        CephMathProblemSet {
-            count: 0,
-            problems: problems,
+        CephMathProblemSet { problems: problems }
+    }
+
+    fn add_columns(&mut self, ics: &InputColumns) {
+        let mut idx: u64 = 0;
+        let mut current_problem: CephMathProblem =
+            CephMathProblem::new();
+        for kv in ics.columns.iter().rev() {
+            let (_, ic): (&u64, &InputColumn) = kv;
+            match ic.kind {
+                InputColumnKind::Empty => {
+                    if current_problem.terms.len() != 0 {
+                        self.problems.insert(idx, current_problem);
+                        idx += 1;
+                        current_problem = CephMathProblem::new();
+                    }
+                }
+                InputColumnKind::Number => {
+                    let v: i64 = ic.get_value().unwrap();
+                    current_problem.add_term(v);
+                }
+                InputColumnKind::NumberAndOperation => {
+                    let v: i64 = ic.get_value().unwrap();
+                    let op: CephMathOperation =
+                        ic.get_operation().unwrap();
+                    current_problem.add_term(v);
+                    current_problem.set_operation(op);
+                }
+            }
+        }
+        if current_problem.terms.len() != 0 {
+            self.problems.insert(idx, current_problem);
         }
     }
 
+    #[allow(dead_code)]
     fn add_terms(&mut self, terms: &Vec<&str>) {
         // create the problems if they don't exist yet
         //
         if self.problems.len() == 0 {
+            let mut idx: u64 = 0;
             for _term in terms.iter() {
-                self.problems
-                    .insert(self.count, CephMathProblem::new());
-                self.count += 1;
+                self.problems.insert(idx, CephMathProblem::new());
+                idx += 1;
             }
         }
 
@@ -114,6 +241,7 @@ impl CephMathProblemSet {
         }
     }
 
+    #[allow(dead_code)]
     fn add_operations(&mut self, operations: &Vec<&str>) {
         if operations.len() != self.problems.len() {
             panic!(
@@ -167,25 +295,16 @@ fn main() -> Result<()> {
 
     let mut grand_total: i64 = 0;
     let mut cmps = CephMathProblemSet::new();
+    let mut ics = InputColumns::new();
     for line in lines {
         let line = line.unwrap();
-        let line = line.trim();
+        // let line = line.trim();
         if 0 == line.len() {
             continue;
         }
-        let parts: Vec<&str> = line.split_whitespace().collect();
-        if parts.len() <= 1 {
-            panic!(
-                "INVALID INPUT. Problem set line contains only one token"
-            );
-        }
-        let first_term = parts.get(0).unwrap();
-        if first_term.parse::<i64>().is_ok() {
-            cmps.add_terms(&parts);
-        } else {
-            cmps.add_operations(&parts);
-        }
+        ics.add_columns(&line);
     }
+    cmps.add_columns(&ics);
     cmps.solve_all();
     let solutions = cmps.get_solutions();
     for solution in solutions {
@@ -202,7 +321,7 @@ fn main() -> Result<()> {
 //
 #[test]
 fn given_example() {
-    let expected: i64 = 4277556;
+    let expected: i64 = 3263827; // part 1 was  4277556;
     let raw_input = "123 328  51 64
  45 64  387 23
   6 98  215 314
@@ -210,26 +329,16 @@ fn given_example() {
         .to_string();
     let input = raw_input.as_str();
     let mut cmps = CephMathProblemSet::new();
-    let lc = input.split('\n').count();
+    let mut ics = InputColumns::new();
     let lines = input.split('\n');
     for line in lines {
-        let line = line.trim();
+        // let line = line.trim();
         if 0 == line.len() {
             continue;
         }
-        let parts: Vec<&str> = line.split_whitespace().collect();
-        if parts.len() <= 1 {
-            panic!(
-                "INVALID INPUT. Problem set line contains only one token"
-            );
-        }
-        let first_term = parts.get(0).unwrap();
-        if first_term.parse::<i64>().is_ok() {
-            cmps.add_terms(&parts);
-        } else {
-            cmps.add_operations(&parts);
-        }
+        ics.add_columns(line);
     }
+    cmps.add_columns(&ics);
     cmps.solve_all();
     let solutions = cmps.get_solutions();
     let mut actual: i64 = 0;
