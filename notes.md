@@ -205,3 +205,11 @@ I'll debug it later. For now I need to move on to Part 2.
 Done with part 2. To solve this one I needed to merge overlapping ranges. The most efficient way to do that was during the code that adds each range read from the input. Once ranges are merged, then searching for an id in ranges is faster because the set of merged ranges is much smaller than the original input list of ranges.
 
 I did have to write range copy constructors. I guess I don't really understand ownership and references and lifetimes yet. That is something that I need to get up to speed on.
+
+## Day 6
+
+*Saturday, 2025-12-06*
+
+**04:00**
+
+I'm about to pull the specs. The chatter yesterday was that this is the point where AoC starts to become more computer sciencey and much harder for normal workaday programmers. We shall see.
