@@ -213,3 +213,11 @@ I did have to write range copy constructors. I guess I don't really understand o
 **04:00**
 
 I'm about to pull the specs. The chatter yesterday was that this is the point where AoC starts to become more computer sciencey and much harder for normal workaday programmers. We shall see.
+
+**05:15**
+
+Created a couple structs to help with this, but then got sidetracked into figuring out how to remove trailing space in helix-editor. Back out of the rabbit hole now and about to try to populate structs from a problem set.
+
+**07:28**
+
+Got the example working. Ran the proper input file and got the correct result. Part 1 solved. This time I put the example input into a unit test so I could run with 'cargo test'.
