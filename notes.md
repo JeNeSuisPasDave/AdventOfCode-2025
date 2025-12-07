@@ -250,3 +250,15 @@ Input file was processed correctly. Moving on to Part 2.
 
 Implemented part 2 and got the correct answer with the example input.
 
+**11:49**
+
+I might have some kind of infinite loop or terrible inefficiency in the code. The code ran long enough that I was compelled to halt it with ctrl-C. I don't know what is going on.
+
+Okay, the code seems to be working but starts getting exponentially slow with each line processed. It becomes noticeable after line 90 or so.
+
+I think the solution will be to just track the count of timelines that have a path through a particular location in the manifold, rather than tracking the paths themselves. Going to refactor into that implementation now.
+
+**12:35**
+
+Implemented the much faster approach, just keep track of the paths through a given point, using a BTreeMap to accumulate the counts by position. I ran the test example and submitted the result; it was correct.
+

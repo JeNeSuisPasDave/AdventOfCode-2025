@@ -1,4 +1,4 @@
-use std::collections::BTreeSet;
+use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
@@ -113,40 +113,56 @@ fn main() -> Result<()> {
     let rdr = BufReader::new(f);
     let lines = rdr.lines();
 
-    let mut path_count: usize = 0;
     let mut started: bool = false;
-    let mut incoming_particles: Vec<usize> = Vec::new();
+    let mut incoming_particles: BTreeMap<usize, usize> =
+        BTreeMap::new();
     for line in lines {
-        let mut outgoing_beams: BTreeSet<usize> = BTreeSet::new();
         let line = line.unwrap();
         let line = line.trim();
         if 0 == line.len() {
             continue;
         }
-        let mut outgoing_particles: Vec<usize> = Vec::new();
+        let mut outgoing_particles: BTreeMap<usize, usize> =
+            BTreeMap::new();
         let mut equip: EquipmentConfig = EquipmentConfig::new();
         equip.into_equipment(line);
         if !started && equip.has_start() {
-            outgoing_particles.push(equip.start_at());
+            outgoing_particles.insert(equip.start_at(), 1);
             started = true;
         } else if started {
             if equip.has_start() {
                 panic!("multiple beam entry points!");
             }
             let equip_count = equip.len();
-            for beam_idx in incoming_particles.iter() {
-                let beam_idx = *beam_idx;
+            for key in incoming_particles.keys() {
+                let beam_idx = *key;
                 if equip.has_splitter_at(beam_idx) {
                     if beam_idx > 0 {
                         let i = beam_idx - 1;
-                        outgoing_particles.push(i);
+                        if !outgoing_particles.contains_key(&i) {
+                            outgoing_particles.insert(i, 0);
+                        }
+                        let n: &mut usize =
+                            outgoing_particles.get_mut(&i).unwrap();
+                        *n += incoming_particles[key];
                     }
                     if beam_idx < (equip_count - 1) {
                         let i = beam_idx + 1;
-                        outgoing_particles.push(i);
+                        if !outgoing_particles.contains_key(&i) {
+                            outgoing_particles.insert(i, 0);
+                        }
+                        let n: &mut usize =
+                            outgoing_particles.get_mut(&i).unwrap();
+                        *n += incoming_particles[key];
                     }
                 } else {
-                    outgoing_particles.push(beam_idx);
+                    let i: usize = *key;
+                    if !outgoing_particles.contains_key(&i) {
+                        outgoing_particles.insert(i, 0);
+                    }
+                    let n: &mut usize =
+                        outgoing_particles.get_mut(&i).unwrap();
+                    *n += incoming_particles[key];
                 }
             }
         }
@@ -158,7 +174,10 @@ fn main() -> Result<()> {
 
     // Display the grand total of problem answers
     //
-    path_count = incoming_particles.len();
+    let mut path_count: usize = 0;
+    for count in incoming_particles.values() {
+        path_count += count;
+    }
     println!("The path count is {}", path_count);
     Ok(())
 }
@@ -166,7 +185,7 @@ fn main() -> Result<()> {
 // test with example input
 //
 #[test]
-fn given_example_quantum() {
+fn given_example_quantum_fast() {
     let expected_path_count: usize = 40;
     let raw_input = " .......S.......
 ...............
@@ -187,7 +206,8 @@ fn given_example_quantum() {
 "
     .to_string();
     let mut started: bool = false;
-    let mut incoming_particles: Vec<usize> = Vec::new();
+    let mut incoming_particles: BTreeMap<usize, usize> =
+        BTreeMap::new();
     let input = raw_input.as_str();
     let lines = input.split('\n');
     for line in lines {
@@ -195,30 +215,47 @@ fn given_example_quantum() {
         if 0 == line.len() {
             continue;
         }
-        let mut outgoing_particles: Vec<usize> = Vec::new();
+        let mut outgoing_particles: BTreeMap<usize, usize> =
+            BTreeMap::new();
         let mut equip: EquipmentConfig = EquipmentConfig::new();
         equip.into_equipment(line);
         if !started && equip.has_start() {
-            outgoing_particles.push(equip.start_at());
+            outgoing_particles.insert(equip.start_at(), 1);
             started = true;
         } else if started {
             if equip.has_start() {
                 panic!("multiple beam entry points!");
             }
             let equip_count = equip.len();
-            for beam_idx in incoming_particles.iter() {
-                let beam_idx = *beam_idx;
+            for key in incoming_particles.keys() {
+                let beam_idx = *key;
                 if equip.has_splitter_at(beam_idx) {
                     if beam_idx > 0 {
                         let i = beam_idx - 1;
-                        outgoing_particles.push(i);
+                        if !outgoing_particles.contains_key(&i) {
+                            outgoing_particles.insert(i, 0);
+                        }
+                        let n: &mut usize =
+                            outgoing_particles.get_mut(&i).unwrap();
+                        *n += incoming_particles[key];
                     }
                     if beam_idx < (equip_count - 1) {
                         let i = beam_idx + 1;
-                        outgoing_particles.push(i);
+                        if !outgoing_particles.contains_key(&i) {
+                            outgoing_particles.insert(i, 0);
+                        }
+                        let n: &mut usize =
+                            outgoing_particles.get_mut(&i).unwrap();
+                        *n += incoming_particles[key];
                     }
                 } else {
-                    outgoing_particles.push(beam_idx);
+                    let i: usize = *key;
+                    if !outgoing_particles.contains_key(&i) {
+                        outgoing_particles.insert(i, 0);
+                    }
+                    let n: &mut usize =
+                        outgoing_particles.get_mut(&i).unwrap();
+                    *n += incoming_particles[key];
                 }
             }
         }
@@ -227,79 +264,9 @@ fn given_example_quantum() {
     if !started {
         panic!("NOT STARTED!!");
     }
-    let actual_path_count: usize = incoming_particles.len();
+    let mut actual_path_count: usize = 0;
+    for count in incoming_particles.values() {
+        actual_path_count += count;
+    }
     assert_eq!(expected_path_count, actual_path_count);
-}
-
-// test with example input
-//
-#[test]
-fn given_example_classical() {
-    let expected_split_count: i64 = 21;
-    let raw_input = " .......S.......
-...............
-.......^.......
-...............
-......^.^......
-...............
-.....^.^.^.....
-...............
-....^.^...^....
-...............
-...^.^...^.^...
-...............
-..^...^.....^..
-...............
-.^.^.^.^.^...^.
-...............
-"
-    .to_string();
-    let mut actual_split_count: i64 = 0;
-    let mut started: bool = false;
-    let mut incoming_beams: BTreeSet<usize> = BTreeSet::new();
-    let input = raw_input.as_str();
-    let lines = input.split('\n');
-    for line in lines {
-        let mut outgoing_beams: BTreeSet<usize> = BTreeSet::new();
-        let line = line.trim();
-        if 0 == line.len() {
-            continue;
-        }
-        let mut equip: EquipmentConfig = EquipmentConfig::new();
-        equip.into_equipment(line);
-        if !started && equip.has_start() {
-            outgoing_beams.insert(equip.start_at());
-            started = true;
-        } else if started {
-            if equip.has_start() {
-                panic!("multiple beam entry points!");
-            }
-            let equip_count = equip.len();
-            for beam_idx in incoming_beams.iter() {
-                let beam_idx = *beam_idx;
-                if equip.has_splitter_at(beam_idx) {
-                    actual_split_count += 1;
-                    if beam_idx > 0 {
-                        let i = beam_idx - 1;
-                        if !outgoing_beams.contains(&i) {
-                            outgoing_beams.insert(i);
-                        }
-                    }
-                    if beam_idx < (equip_count - 1) {
-                        let i = beam_idx + 1;
-                        if !outgoing_beams.contains(&i) {
-                            outgoing_beams.insert(i);
-                        }
-                    }
-                } else {
-                    outgoing_beams.insert(beam_idx);
-                }
-            }
-        }
-        incoming_beams = outgoing_beams;
-    }
-    if !started {
-        panic!("NOT STARTED!!");
-    }
-    assert_eq!(expected_split_count, actual_split_count);
 }
