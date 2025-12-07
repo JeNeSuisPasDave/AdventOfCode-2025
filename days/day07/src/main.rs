@@ -113,9 +113,9 @@ fn main() -> Result<()> {
     let rdr = BufReader::new(f);
     let lines = rdr.lines();
 
-    let mut split_count: i64 = 0;
+    let mut path_count: usize = 0;
     let mut started: bool = false;
-    let mut incoming_beams: BTreeSet<usize> = BTreeSet::new();
+    let mut incoming_particles: Vec<usize> = Vec::new();
     for line in lines {
         let mut outgoing_beams: BTreeSet<usize> = BTreeSet::new();
         let line = line.unwrap();
@@ -123,38 +123,34 @@ fn main() -> Result<()> {
         if 0 == line.len() {
             continue;
         }
+        let mut outgoing_particles: Vec<usize> = Vec::new();
         let mut equip: EquipmentConfig = EquipmentConfig::new();
         equip.into_equipment(line);
         if !started && equip.has_start() {
-            outgoing_beams.insert(equip.start_at());
+            outgoing_particles.push(equip.start_at());
             started = true;
         } else if started {
             if equip.has_start() {
                 panic!("multiple beam entry points!");
             }
             let equip_count = equip.len();
-            for beam_idx in incoming_beams.iter() {
+            for beam_idx in incoming_particles.iter() {
                 let beam_idx = *beam_idx;
                 if equip.has_splitter_at(beam_idx) {
-                    split_count += 1;
                     if beam_idx > 0 {
                         let i = beam_idx - 1;
-                        if !outgoing_beams.contains(&i) {
-                            outgoing_beams.insert(i);
-                        }
+                        outgoing_particles.push(i);
                     }
                     if beam_idx < (equip_count - 1) {
                         let i = beam_idx + 1;
-                        if !outgoing_beams.contains(&i) {
-                            outgoing_beams.insert(i);
-                        }
+                        outgoing_particles.push(i);
                     }
                 } else {
-                    outgoing_beams.insert(beam_idx);
+                    outgoing_particles.push(beam_idx);
                 }
             }
         }
-        incoming_beams = outgoing_beams;
+        incoming_particles = outgoing_particles;
     }
     if !started {
         panic!("NOT STARTED!!");
@@ -162,14 +158,83 @@ fn main() -> Result<()> {
 
     // Display the grand total of problem answers
     //
-    println!("The beam split count is {}", split_count);
+    path_count = incoming_particles.len();
+    println!("The path count is {}", path_count);
     Ok(())
 }
 
 // test with example input
 //
 #[test]
-fn given_example() {
+fn given_example_quantum() {
+    let expected_path_count: usize = 40;
+    let raw_input = " .......S.......
+...............
+.......^.......
+...............
+......^.^......
+...............
+.....^.^.^.....
+...............
+....^.^...^....
+...............
+...^.^...^.^...
+...............
+..^...^.....^..
+...............
+.^.^.^.^.^...^.
+...............
+"
+    .to_string();
+    let mut started: bool = false;
+    let mut incoming_particles: Vec<usize> = Vec::new();
+    let input = raw_input.as_str();
+    let lines = input.split('\n');
+    for line in lines {
+        let line = line.trim();
+        if 0 == line.len() {
+            continue;
+        }
+        let mut outgoing_particles: Vec<usize> = Vec::new();
+        let mut equip: EquipmentConfig = EquipmentConfig::new();
+        equip.into_equipment(line);
+        if !started && equip.has_start() {
+            outgoing_particles.push(equip.start_at());
+            started = true;
+        } else if started {
+            if equip.has_start() {
+                panic!("multiple beam entry points!");
+            }
+            let equip_count = equip.len();
+            for beam_idx in incoming_particles.iter() {
+                let beam_idx = *beam_idx;
+                if equip.has_splitter_at(beam_idx) {
+                    if beam_idx > 0 {
+                        let i = beam_idx - 1;
+                        outgoing_particles.push(i);
+                    }
+                    if beam_idx < (equip_count - 1) {
+                        let i = beam_idx + 1;
+                        outgoing_particles.push(i);
+                    }
+                } else {
+                    outgoing_particles.push(beam_idx);
+                }
+            }
+        }
+        incoming_particles = outgoing_particles;
+    }
+    if !started {
+        panic!("NOT STARTED!!");
+    }
+    let actual_path_count: usize = incoming_particles.len();
+    assert_eq!(expected_path_count, actual_path_count);
+}
+
+// test with example input
+//
+#[test]
+fn given_example_classical() {
     let expected_split_count: i64 = 21;
     let raw_input = " .......S.......
 ...............

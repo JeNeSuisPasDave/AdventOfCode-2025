@@ -246,4 +246,7 @@ Got a working implementation that solves the example correction.
 
 Input file was processed correctly. Moving on to Part 2.
 
+**11:43**
+
+Implemented part 2 and got the correct answer with the example input.
 
