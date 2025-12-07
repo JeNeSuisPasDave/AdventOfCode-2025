@@ -234,3 +234,7 @@ Finished part 2. I added a couple additional structs and enums to better handle 
 
 Just finished creating the project and capturing the specs.
 
+**08:59**
+
+Captured the input file and added CLI wrapper and unit test boilerplate to the main.rs. Ready to start solving the puzzle.
+
