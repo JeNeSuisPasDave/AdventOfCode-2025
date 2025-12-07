@@ -241,3 +241,9 @@ Captured the input file and added CLI wrapper and unit test boilerplate to the m
 **10:46**
 
 Got a working implementation that solves the example correction.
+
+**10:49**
+
+Input file was processed correctly. Moving on to Part 2.
+
+
