@@ -225,3 +225,12 @@ Got the example working. Ran the proper input file and got the correct result. P
 **10:47**
 
 Finished part 2. I added a couple additional structs and enums to better handle the weird input scheme. Luckily BTreeMap has a double-linked index so I could do iter().rev() to easily handle the right-to-left requirements.
+
+## Day 7
+
+*Sunday, 2025-12-07*
+
+**08:44**
+
+Just finished creating the project and capturing the specs.
+
