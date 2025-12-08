@@ -269,3 +269,8 @@ Implemented the much faster approach, just keep track of the paths through a giv
 **00:29**
 
 Created empty project. Populated specs and example input.
+
+**01:03**
+
+Added CLI and test wrapper. Added puzzle input file.
+
