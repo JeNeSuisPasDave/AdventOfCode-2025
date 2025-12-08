@@ -262,3 +262,10 @@ I think the solution will be to just track the count of timelines that have a pa
 
 Implemented the much faster approach, just keep track of the paths through a given point, using a BTreeMap to accumulate the counts by position. I ran the test example and submitted the result; it was correct.
 
+## Day 8
+
+*Monday, 2025-12-08*
+
+**00:29**
+
+Created empty project. Populated specs and example input.
