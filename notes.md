@@ -279,3 +279,14 @@ Added CLI and test wrapper. Added puzzle input file.
 I couldn't find a Rust crate that would help me with this. `geo` only deals with plane geometry (2-D). And other crates looked dodgey. So I'm creating my own structs and functions to handle this. First thing is a Point struct with a distance_from() function. That done, I think I need to create a Circuit struct and have collections of circuits. The Circuit struct would need to contain an ordered collection of connected points (junction boxes) and produce the endpoints (junction boxes at each end of the circuit) and determine whether a point is already in a circuit.
 
 Anyway, I need to go back to sleep, but I'll consider circuits and finding the nearest points/circuits when I resume work on the puzzle.
+
+**11:39**
+
+Got my idea of how to do this implement in a test. It is doing what I wanted but not getting the correct answer. I think I don't understand the specs correctly. I'm assuming that I can connect only an unconnected box to the beginning or end of another circuit (which might be a circuit of 1 box), but that may be wrong.
+
+**11:57**
+
+I have to say I'm struggling with understanding the Day 8 Part 1 specs. I was assuming a linear circuit, so I'd only connect boxes to the endpoint of the circuit ... but I get the wrong answers. So maybe a "circuit" is just bag of nearby junction boxes, and they might be wired together in any old way. I'm going to try that.
+
+Also, I got a hint about discovered neighbors already being in a circuit count toward the "connections made" counter may be critical. I would never have interpreted it that way. We shall see.
+
