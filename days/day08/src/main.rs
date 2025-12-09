@@ -191,7 +191,21 @@ fn find_closest_pair(
             }
         }
         let d = a.distance_from(b);
-        if (d >= min_dist) && (d < *closest_distance) {
+        if min_dist == d {
+            println!(
+                "SAME AS MIN_DIST: {} {}",
+                a.describe_coords(),
+                b.describe_coords()
+            );
+        }
+        if *closest_distance == d {
+            println!(
+                "SAME AS CLOSEST_DISTANCE: {} {}",
+                a.describe_coords(),
+                b.describe_coords()
+            );
+        }
+        if (d >= min_dist) && (d <= *closest_distance) {
             *closest_distance = d;
             *closest_idx_a = a.id;
             *closest_idx_b = b.id;
@@ -200,6 +214,54 @@ fn find_closest_pair(
                 closest_idx_a, closest_idx_b, closest_distance
             );
         }
+    }
+}
+
+fn produce_pair_key(a: usize, b: usize) -> String {
+    if b < a {
+        format!("{}-{}", b, a)
+    } else {
+        format!("{}-{}", a, b)
+    }
+}
+
+fn produce_pair(s: &str) -> (u64, u64) {
+    let parts: Vec<&str> = s.split('-').collect();
+    let a: u64 = parts[0].parse::<u64>().unwrap();
+    let b: u64 = parts[1].parse::<u64>().unwrap();
+    (a, b)
+}
+
+fn list_all_pair_distances(
+    junction_boxes: &Vec<JunctionBox>,
+    distance_by_pair: &mut BTreeMap<String, u64>,
+) {
+    let len = junction_boxes.len();
+    list_pair_distances(junction_boxes, distance_by_pair, 0..len);
+}
+
+fn list_pair_distances(
+    junction_boxes: &Vec<JunctionBox>,
+    distance_by_pair: &mut BTreeMap<String, u64>,
+    rng: Range<usize>,
+) {
+    println!("find_closest_pair(.., {}..{}, ...)", rng.start, rng.end);
+    let idx: usize = rng.start;
+    let end: usize = rng.end;
+    if 1 >= (end - idx) {
+        return;
+    }
+    let start = idx + 1;
+    list_pair_distances(junction_boxes, distance_by_pair, start..end);
+    for other_idx in start..end {
+        let key = produce_pair_key(idx, other_idx);
+        if distance_by_pair.contains_key(&key) {
+            continue;
+        }
+        let a: &JunctionBox = &(junction_boxes[idx]);
+        let b: &JunctionBox = &(junction_boxes[other_idx]);
+        let d = a.distance_from(b);
+        distance_by_pair.insert(key, d);
     }
 }
 
@@ -217,11 +279,11 @@ fn add_pair(
         already_paired.insert(id_b, paired_with);
     }
     let paired_with = already_paired.get_mut(&id_a).unwrap();
-    if (!paired_with.contains(&id_b)) {
+    if !paired_with.contains(&id_b) {
         paired_with.insert(id_b);
     }
     let paired_with = already_paired.get_mut(&id_b).unwrap();
-    if (!paired_with.contains(&id_a)) {
+    if !paired_with.contains(&id_a) {
         paired_with.insert(id_a);
     }
 }
@@ -267,6 +329,105 @@ fn check_distance_2() {
     let b = JunctionBox::new(346, 949, 466, 1);
     let dist = a.distance_from(&b);
     assert_eq!(243850, dist);
+}
+
+#[test]
+fn pair_to_key() {
+    let a: usize = 2;
+    let b: usize = 1;
+    let key: String = produce_pair_key(a, b);
+    assert_eq!("1-2", &key);
+}
+
+#[test]
+fn key_to_pair() {
+    let key = "1-2";
+    let (a, b) = produce_pair(key);
+    assert_eq!(1, a);
+    assert_eq!(2, b);
+}
+
+#[test]
+fn list_sorted_pair_distances() {
+    let raw_input = "162,817,812
+57,618,57
+906,360,560
+592,479,940
+352,342,300
+466,668,158
+542,29,236
+431,825,988
+739,650,466
+52,470,668
+216,146,977
+819,987,18
+117,168,530
+805,96,715
+346,949,466
+970,615,88
+941,993,340
+862,61,35
+984,92,344
+425,690,689"
+        .to_string();
+    let mut junction_boxes: Vec<JunctionBox> = Vec::new();
+    let re_coord =
+        Regex::new(r"^\s*([0-9]+)\s*,\s*([0-9]+)\s*,\s*([0-9]+)\s*$")
+            .unwrap();
+    let input = raw_input.as_str();
+    let lines = input.split('\n');
+    let mut line_num: usize = 0;
+    let mut idx: usize = 0;
+    for line in lines {
+        line_num += 1;
+        let line = line.trim();
+        if 0 == line.len() {
+            continue;
+        }
+        if !re_coord.is_match(&line) {
+            println!(
+                "*** FAILED *** to match line {}: '{}'",
+                line_num, line
+            );
+            continue;
+        }
+        let coords = re_coord.captures(&line).unwrap();
+        let xs = coords.get(1).unwrap().as_str();
+        let x = xs.parse::<i64>().unwrap();
+        let ys = coords.get(2).unwrap().as_str();
+        let y = ys.parse::<i64>().unwrap();
+        let zs = coords.get(3).unwrap().as_str();
+        let z = zs.parse::<i64>().unwrap();
+        let junction_box: JunctionBox = JunctionBox::new(x, y, z, idx);
+        junction_boxes.push(junction_box);
+        idx += 1;
+    }
+    println!("Read in {} points", junction_boxes.len());
+
+    // find all the distances
+    //
+    let mut distance_by_pair: BTreeMap<String, u64> = BTreeMap::new();
+    list_all_pair_distances(&junction_boxes, &mut distance_by_pair);
+
+    // sort in ascending order by distance
+    //
+    let mut keys: Vec<&String> = distance_by_pair.keys().collect();
+    keys.sort_by(|a, b| {
+        let d_a: u64 = *distance_by_pair.get(a.as_str()).unwrap();
+        let d_b: u64 = *distance_by_pair.get(b.as_str()).unwrap();
+        if d_a > d_b {
+            Ordering::Greater
+        } else if d_a < d_b {
+            Ordering::Less
+        } else {
+            Ordering::Equal
+        }
+    });
+    println!("DISTANCES by pair");
+    for key in keys {
+        println!("{}: {}", key, distance_by_pair.get(key).unwrap());
+    }
+    panic!("force FAIL");
 }
 
 // test with example input, one pass
@@ -360,7 +521,7 @@ fn given_example_part1() {
                     // both boxes are in the same circuit. Count that
                     // as a connection.
                     //
-                    connection_count += 1;
+                    // connection_count += 1;
                     add_pair(&mut already_paired, id_a, id_b);
                     println!(
                         "RE-Connecting {} and {}",
@@ -382,7 +543,7 @@ fn given_example_part1() {
                     // each box is in a different circuit;
                     // don't count that as making a connection
                     //
-                    connection_count += 1;
+                    // connection_count += 1;
                     add_pair(&mut already_paired, id_a, id_b);
                     println!(
                         "Circuits {} and {} are unchanged",

@@ -303,3 +303,7 @@ I just realized I don't need to do the square root to calculation the distance. 
 **04:55**
 
 I removed the square root distance operation, and switched from f64 to u64 distance units. Unfortunately, the bug remains.
+
+**07:05**
+
+I'm not seeing the problem. I created a list of all pairings, sorted by distance, and manually checked the building of circuits. I never get 5,4,2,2; I always get more 2-box circuits and never get a 4 for the second largest circuit.
