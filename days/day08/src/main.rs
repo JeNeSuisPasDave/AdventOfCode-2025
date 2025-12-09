@@ -27,14 +27,6 @@ struct Cli {
 }
 
 #[derive(Debug)]
-enum CircuitMergeKind {
-    FirstToFirst,
-    FirstToLast,
-    LastToFirst,
-    LastToLast,
-}
-
-#[derive(Debug)]
 struct Point {
     x: i64,
     y: i64,
@@ -220,10 +212,10 @@ fn produce_pair_key(a: usize, b: usize) -> String {
     }
 }
 
-fn produce_pair(s: &str) -> (u64, u64) {
+fn produce_pair(s: &str) -> (usize, usize) {
     let parts: Vec<&str> = s.split('-').collect();
-    let a: u64 = parts[0].parse::<u64>().unwrap();
-    let b: u64 = parts[1].parse::<u64>().unwrap();
+    let a: usize = parts[0].parse::<usize>().unwrap();
+    let b: usize = parts[1].parse::<usize>().unwrap();
     (a, b)
 }
 
@@ -282,10 +274,255 @@ fn add_pair(
     }
 }
 
+fn list_sizes_of_largest_circuits(
+    upto: usize,
+    junction_boxes: &mut Vec<JunctionBox>,
+) -> Vec<usize> {
+    let mut circuits: Vec<Circuit> = Vec::new();
+    let mut circuits_deleted: Vec<bool> = Vec::new();
+    let mut circuits_by_id: BTreeMap<usize, usize> = BTreeMap::new();
+
+    // find the n closest junction boxeds
+    //
+    let mut min_dist = 0_u64;
+    let mut connection_count: usize = 0;
+    let mut already_paired: BTreeMap<usize, BTreeSet<usize>> =
+        BTreeMap::new();
+    while connection_count < upto {
+        let (id_a, id_b, dist) = find_closest_pairs(
+            junction_boxes,
+            &already_paired,
+            min_dist,
+        );
+        min_dist = dist;
+        let a_in_circuit = circuits_by_id.contains_key(&id_a);
+        let b_in_circuit = circuits_by_id.contains_key(&id_b);
+        if a_in_circuit {
+            let cid_a = *circuits_by_id.get(&id_a).unwrap();
+            if b_in_circuit {
+                let cid_b = *circuits_by_id.get(&id_b).unwrap();
+                if cid_a == cid_b {
+                    // both boxes are in the same circuit. Count that
+                    // as a connection.
+                    //
+                    connection_count += 1;
+                    add_pair(&mut already_paired, id_a, id_b);
+                } else {
+                    // each box is in a different circuit;
+                    // MERGE the circuits
+                    //
+                    let circuit_b = circuits.get(cid_b).unwrap();
+                    let mut jbs: Vec<usize> = Vec::new();
+                    for jb_id in circuit_b.junction_boxes.keys() {
+                        jbs.push(*jb_id);
+                    }
+                    let circuit_a = circuits.get_mut(cid_a).unwrap();
+                    circuit_a.merge(&junction_boxes, &jbs);
+                    circuits_deleted[cid_b] = true;
+                    connection_count += 1;
+                    add_pair(&mut already_paired, id_a, id_b);
+                }
+            } else {
+                let circuit_a = circuits.get_mut(cid_a).unwrap();
+                circuit_a.add(junction_boxes.get(id_b).unwrap());
+                circuits_by_id.insert(id_b, cid_a);
+                connection_count += 1;
+                add_pair(&mut already_paired, id_a, id_b);
+            }
+        } else if b_in_circuit {
+            let cid_b = *circuits_by_id.get(&id_b).unwrap();
+            let circuit_b = circuits.get_mut(cid_b).unwrap();
+            circuit_b.add(junction_boxes.get(id_a).unwrap());
+            circuits_by_id.insert(id_a, cid_b);
+            connection_count += 1;
+            add_pair(&mut already_paired, id_a, id_b);
+        } else {
+            let mut circuit_new: Circuit =
+                Circuit::new(junction_boxes.get(id_a).unwrap());
+            circuit_new.add(junction_boxes.get(id_b).unwrap());
+            circuits.push(circuit_new);
+            circuits_deleted.push(false);
+            let cid_new = circuits.len() - 1;
+            circuits_by_id.insert(id_a, cid_new);
+            circuits_by_id.insert(id_b, cid_new);
+            connection_count += 1;
+            add_pair(&mut already_paired, id_a, id_b);
+        }
+    }
+
+    // sort circuits by size and id
+    //
+    let mut largest_circuits: Vec<usize> = Vec::new();
+    for i in 0..circuits.len() {
+        if !circuits_deleted[i] {
+            largest_circuits.push(i);
+        } else {
+            largest_circuits.push(usize::MAX);
+        }
+    }
+    largest_circuits.sort_by(|a, b| {
+        if *a == usize::MAX && *b == usize::MAX {
+            Ordering::Equal
+        } else if *a == usize::MAX {
+            Ordering::Greater
+        } else if *b == usize::MAX {
+            Ordering::Less
+        } else {
+            let c_a: &Circuit = circuits.get(*a).unwrap();
+            let c_b: &Circuit = circuits.get(*b).unwrap();
+            if c_a.junction_box_count() > c_b.junction_box_count() {
+                Ordering::Less
+            } else if c_a.junction_box_count()
+                < c_b.junction_box_count()
+            {
+                Ordering::Greater
+            } else {
+                Ordering::Equal
+            }
+        }
+    });
+
+    let mut result: Vec<usize> = Vec::new();
+    for i in largest_circuits.iter() {
+        if *i != usize::MAX {
+            result.push(circuits[*i].junction_box_count());
+        }
+    }
+    result
+}
+
+fn list_sizes_of_largest_circuits_fast(
+    upto: usize,
+    junction_boxes: &mut Vec<JunctionBox>,
+) -> Vec<usize> {
+    let mut circuits: Vec<Circuit> = Vec::new();
+    let mut circuits_deleted: Vec<bool> = Vec::new();
+    let mut circuits_by_id: BTreeMap<usize, usize> = BTreeMap::new();
+
+    // find the n closest junction boxeds
+    //
+    let mut distance_by_pair: BTreeMap<String, u64> = BTreeMap::new();
+    list_all_pair_distances(junction_boxes, &mut distance_by_pair);
+
+    // sort in ascending order by distance
+    //
+    let mut keys: Vec<&String> = distance_by_pair.keys().collect();
+    keys.sort_by(|a, b| {
+        let d_a: u64 = *distance_by_pair.get(a.as_str()).unwrap();
+        let d_b: u64 = *distance_by_pair.get(b.as_str()).unwrap();
+        if d_a > d_b {
+            Ordering::Greater
+        } else if d_a < d_b {
+            Ordering::Less
+        } else {
+            Ordering::Equal
+        }
+    });
+
+    let mut connection_count: usize = 0;
+    for key in keys {
+        if connection_count >= upto {
+            break;
+        }
+        let (id_a, id_b): (usize, usize) = produce_pair(key);
+        let dist: u64 = *distance_by_pair.get(key).unwrap();
+        let a_in_circuit = circuits_by_id.contains_key(&id_a);
+        let b_in_circuit = circuits_by_id.contains_key(&id_b);
+        if a_in_circuit {
+            let cid_a = *circuits_by_id.get(&id_a).unwrap();
+            if b_in_circuit {
+                let cid_b = *circuits_by_id.get(&id_b).unwrap();
+                if cid_a == cid_b {
+                    // both boxes are in the same circuit. Count that
+                    // as a connection.
+                    //
+                    connection_count += 1;
+                } else {
+                    // each box is in a different circuit;
+                    // MERGE the circuits
+                    //
+                    let circuit_b = circuits.get(cid_b).unwrap();
+                    let mut jbs: Vec<usize> = Vec::new();
+                    for jb_id in circuit_b.junction_boxes.keys() {
+                        jbs.push(*jb_id);
+                    }
+                    let circuit_a = circuits.get_mut(cid_a).unwrap();
+                    circuit_a.merge(&junction_boxes, &jbs);
+                    circuits_deleted[cid_b] = true;
+                    connection_count += 1;
+                }
+            } else {
+                let circuit_a = circuits.get_mut(cid_a).unwrap();
+                circuit_a.add(junction_boxes.get(id_b).unwrap());
+                circuits_by_id.insert(id_b, cid_a);
+                connection_count += 1;
+            }
+        } else if b_in_circuit {
+            let cid_b = *circuits_by_id.get(&id_b).unwrap();
+            let circuit_b = circuits.get_mut(cid_b).unwrap();
+            circuit_b.add(junction_boxes.get(id_a).unwrap());
+            circuits_by_id.insert(id_a, cid_b);
+            connection_count += 1;
+        } else {
+            let mut circuit_new: Circuit =
+                Circuit::new(junction_boxes.get(id_a).unwrap());
+            circuit_new.add(junction_boxes.get(id_b).unwrap());
+            circuits.push(circuit_new);
+            circuits_deleted.push(false);
+            let cid_new = circuits.len() - 1;
+            circuits_by_id.insert(id_a, cid_new);
+            circuits_by_id.insert(id_b, cid_new);
+            connection_count += 1;
+        }
+    }
+
+    // sort circuits by size and id
+    //
+    let mut largest_circuits: Vec<usize> = Vec::new();
+    for i in 0..circuits.len() {
+        if !circuits_deleted[i] {
+            largest_circuits.push(i);
+        } else {
+            largest_circuits.push(usize::MAX);
+        }
+    }
+    largest_circuits.sort_by(|a, b| {
+        if *a == usize::MAX && *b == usize::MAX {
+            Ordering::Equal
+        } else if *a == usize::MAX {
+            Ordering::Greater
+        } else if *b == usize::MAX {
+            Ordering::Less
+        } else {
+            let c_a: &Circuit = circuits.get(*a).unwrap();
+            let c_b: &Circuit = circuits.get(*b).unwrap();
+            if c_a.junction_box_count() > c_b.junction_box_count() {
+                Ordering::Less
+            } else if c_a.junction_box_count()
+                < c_b.junction_box_count()
+            {
+                Ordering::Greater
+            } else {
+                Ordering::Equal
+            }
+        }
+    });
+
+    let mut result: Vec<usize> = Vec::new();
+    for i in largest_circuits.iter() {
+        if *i != usize::MAX {
+            result.push(circuits[*i].junction_box_count());
+        }
+    }
+    result
+}
+
 // Binary crate entry point
 //
 fn main() -> Result<()> {
     let args = Cli::parse();
+    let upto = &args.upto;
+    let productoflargest = &args.productoflargest;
     let path = &args.path;
 
     let f = File::open(path).with_context(|| {
@@ -294,18 +531,53 @@ fn main() -> Result<()> {
     let rdr = BufReader::new(f);
     let lines = rdr.lines();
 
+    let mut junction_boxes: Vec<JunctionBox> = Vec::new();
+    let re_coord =
+        Regex::new(r"^\s*([0-9]+)\s*,\s*([0-9]+)\s*,\s*([0-9]+)\s*$")
+            .unwrap();
+    let mut line_num: usize = 0;
+    let mut idx: usize = 0;
     for line in lines {
+        line_num += 1;
         let line = line.unwrap();
         let line = line.trim();
         if 0 == line.len() {
             continue;
         }
+        if !re_coord.is_match(&line) {
+            println!(
+                "*** FAILED *** to match line {}: '{}'",
+                line_num, line
+            );
+            continue;
+        }
+        let coords = re_coord.captures(&line).unwrap();
+        let xs = coords.get(1).unwrap().as_str();
+        let x = xs.parse::<i64>().unwrap();
+        let ys = coords.get(2).unwrap().as_str();
+        let y = ys.parse::<i64>().unwrap();
+        let zs = coords.get(3).unwrap().as_str();
+        let z = zs.parse::<i64>().unwrap();
+        let junction_box: JunctionBox = JunctionBox::new(x, y, z, idx);
+        junction_boxes.push(junction_box);
+        idx += 1;
+    }
+
+    // build the circuits and find the largest
+    //
+    let circuit_sizes: Vec<usize> =
+        list_sizes_of_largest_circuits_fast(*upto, &mut junction_boxes);
+    let mut actual_product: usize = 1;
+    for i in 0..*productoflargest {
+        actual_product *= circuit_sizes[i];
     }
 
     // Display the grand total of problem answers
     //
-    let path_count: usize = 0;
-    println!("The path count is {}", path_count);
+    println!(
+        "The product of {} largest circuit sizes is {}",
+        productoflargest, actual_product
+    );
     Ok(())
 }
 
@@ -455,9 +727,6 @@ fn given_example_part1() {
 425,690,689"
         .to_string();
     let mut junction_boxes: Vec<JunctionBox> = Vec::new();
-    let mut circuits: Vec<Circuit> = Vec::new();
-    let mut circuits_deleted: Vec<bool> = Vec::new();
-    let mut circuits_by_id: BTreeMap<usize, usize> = BTreeMap::new();
     let re_coord =
         Regex::new(r"^\s*([0-9]+)\s*,\s*([0-9]+)\s*,\s*([0-9]+)\s*$")
             .unwrap();
@@ -490,122 +759,13 @@ fn given_example_part1() {
         idx += 1;
     }
 
-    // find the n closest junction boxeds
+    // build the circuits and find the largest
     //
-    let mut min_dist = 0_u64;
-    let mut connection_count: usize = 0;
-    let mut already_paired: BTreeMap<usize, BTreeSet<usize>> =
-        BTreeMap::new();
-    while connection_count < upto {
-        let (id_a, id_b, dist) = find_closest_pairs(
-            &junction_boxes,
-            &already_paired,
-            min_dist,
-        );
-        min_dist = dist;
-        let a_in_circuit = circuits_by_id.contains_key(&id_a);
-        let b_in_circuit = circuits_by_id.contains_key(&id_b);
-        if a_in_circuit {
-            let cid_a = *circuits_by_id.get(&id_a).unwrap();
-            if b_in_circuit {
-                let cid_b = *circuits_by_id.get(&id_b).unwrap();
-                if cid_a == cid_b {
-                    // both boxes are in the same circuit. Count that
-                    // as a connection.
-                    //
-                    connection_count += 1;
-                    add_pair(&mut already_paired, id_a, id_b);
-                    let circuit_a = circuits.get(cid_a).unwrap();
-                } else {
-                    // each box is in a different circuit;
-                    // MERGE the circuits
-                    //
-                    let circuit_b = circuits.get(cid_b).unwrap();
-                    let mut jbs: Vec<usize> = Vec::new();
-                    for jb_id in circuit_b.junction_boxes.keys() {
-                        jbs.push(*jb_id);
-                    }
-                    let circuit_a = circuits.get_mut(cid_a).unwrap();
-                    circuit_a.merge(&junction_boxes, &jbs);
-                    circuits_deleted[cid_b] = true;
-                    connection_count += 1;
-                    add_pair(&mut already_paired, id_a, id_b);
-                }
-            } else {
-                let circuit_a = circuits.get_mut(cid_a).unwrap();
-                circuit_a.add(junction_boxes.get(id_b).unwrap());
-                circuits_by_id.insert(id_b, cid_a);
-                connection_count += 1;
-                add_pair(&mut already_paired, id_a, id_b);
-            }
-        } else if b_in_circuit {
-            let cid_b = *circuits_by_id.get(&id_b).unwrap();
-            let circuit_b = circuits.get_mut(cid_b).unwrap();
-            circuit_b.add(junction_boxes.get(id_a).unwrap());
-            circuits_by_id.insert(id_a, cid_b);
-            connection_count += 1;
-            add_pair(&mut already_paired, id_a, id_b);
-        } else {
-            let mut circuit_new: Circuit =
-                Circuit::new(junction_boxes.get(id_a).unwrap());
-            circuit_new.add(junction_boxes.get(id_b).unwrap());
-            circuits.push(circuit_new);
-            circuits_deleted.push(false);
-            let cid_new = circuits.len() - 1;
-            circuits_by_id.insert(id_a, cid_new);
-            circuits_by_id.insert(id_b, cid_new);
-            connection_count += 1;
-            add_pair(&mut already_paired, id_a, id_b);
-        }
-    }
-
-    // sort circuits by size and id
-    //
-    let mut largest_circuits: Vec<usize> = Vec::new();
-    for i in 0..circuits.len() {
-        if !circuits_deleted[i] {
-            largest_circuits.push(i);
-        } else {
-            largest_circuits.push(usize::MAX);
-        }
-    }
-    largest_circuits.sort_by(|a, b| {
-        if *a == usize::MAX && *b == usize::MAX {
-            Ordering::Equal
-        } else if *a == usize::MAX {
-            Ordering::Greater
-        } else if *b == usize::MAX {
-            Ordering::Less
-        } else {
-            let c_a: &Circuit = circuits.get(*a).unwrap();
-            let c_b: &Circuit = circuits.get(*b).unwrap();
-            if c_a.junction_box_count() > c_b.junction_box_count() {
-                Ordering::Less
-            } else if c_a.junction_box_count()
-                < c_b.junction_box_count()
-            {
-                Ordering::Greater
-            } else {
-                Ordering::Equal
-            }
-        }
-    });
+    let circuit_sizes: Vec<usize> =
+        list_sizes_of_largest_circuits(upto, &mut junction_boxes);
     let mut actual_product: usize = 1;
-
-    for i in largest_circuits.iter() {
-        if *i != usize::MAX {
-            println!(
-                "largest {} has {} boxes",
-                i,
-                circuits[*i].junction_box_count()
-            );
-        }
-    }
     for i in 0..productoflargest {
-        actual_product *= circuits
-            .get(largest_circuits[i])
-            .unwrap()
-            .junction_box_count();
+        actual_product *= circuit_sizes[i];
     }
     assert_eq!(expected_product, actual_product);
 }

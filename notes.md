@@ -312,4 +312,8 @@ I'm not seeing the problem. I created a list of all pairings, sorted by distance
 
 Figured it out. If each of the junction boxes in a pair are in different existing circuits, then merge the circuits. Feh. That was in my original code, but I removed it at some early point.
 
+**09:13**
 
+Solving with the actual input data was taking way too long. I had to implement a faster algorithm. I'm just calculation all the distances and then sorting. New code is still solving the example correctly, but produces a result of 5292 with the actual input file and AoC says that is too low! 
+
+Taking a break now. Probably for a week.
