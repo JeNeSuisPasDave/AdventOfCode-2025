@@ -177,7 +177,6 @@ fn find_closest_pair(
     closest_idx_b: &mut usize,
     min_dist: u64,
 ) {
-    println!("find_closest_pair(.., {}..{}, ...)", rng.start, rng.end);
     let idx: usize = rng.start;
     let end: usize = rng.end;
     if 1 >= (end - idx) {
@@ -205,28 +204,10 @@ fn find_closest_pair(
             }
         }
         let d = a.distance_from(b);
-        if min_dist == d {
-            println!(
-                "SAME AS MIN_DIST: {} {}",
-                a.describe_coords(),
-                b.describe_coords()
-            );
-        }
-        if *closest_distance == d {
-            println!(
-                "SAME AS CLOSEST_DISTANCE: {} {}",
-                a.describe_coords(),
-                b.describe_coords()
-            );
-        }
         if (d >= min_dist) && (d <= *closest_distance) {
             *closest_distance = d;
             *closest_idx_a = a.id;
             *closest_idx_b = b.id;
-            println!(
-                "close: {}, {}, {}",
-                closest_idx_a, closest_idx_b, closest_distance
-            );
         }
     }
 }
@@ -259,7 +240,6 @@ fn list_pair_distances(
     distance_by_pair: &mut BTreeMap<String, u64>,
     rng: Range<usize>,
 ) {
-    println!("find_closest_pair(.., {}..{}, ...)", rng.start, rng.end);
     let idx: usize = rng.start;
     let end: usize = rng.end;
     if 1 >= (end - idx) {
@@ -416,7 +396,6 @@ fn list_sorted_pair_distances() {
         junction_boxes.push(junction_box);
         idx += 1;
     }
-    println!("Read in {} points", junction_boxes.len());
 
     // find all the distances
     //
@@ -441,7 +420,7 @@ fn list_sorted_pair_distances() {
     for key in keys {
         println!("{}: {}", key, distance_by_pair.get(key).unwrap());
     }
-    panic!("force FAIL");
+    // panic!("force FAIL");
 }
 
 // test with example input, one pass
@@ -510,7 +489,6 @@ fn given_example_part1() {
         junction_boxes.push(junction_box);
         idx += 1;
     }
-    println!("Read in {} points", junction_boxes.len());
 
     // find the n closest junction boxeds
     //
@@ -537,23 +515,7 @@ fn given_example_part1() {
                     //
                     connection_count += 1;
                     add_pair(&mut already_paired, id_a, id_b);
-                    println!(
-                        "RE-Connecting {} and {}",
-                        junction_boxes
-                            .get(id_a)
-                            .unwrap()
-                            .describe_coords(),
-                        junction_boxes
-                            .get(id_b)
-                            .unwrap()
-                            .describe_coords()
-                    );
                     let circuit_a = circuits.get(cid_a).unwrap();
-                    println!(
-                        "Circuit {} has {} junction boxes",
-                        cid_a,
-                        circuit_a.junction_box_count()
-                    );
                 } else {
                     // each box is in a different circuit;
                     // MERGE the circuits
@@ -568,10 +530,6 @@ fn given_example_part1() {
                     circuits_deleted[cid_b] = true;
                     connection_count += 1;
                     add_pair(&mut already_paired, id_a, id_b);
-                    println!(
-                        "Circuits {} and {} are MERGED",
-                        cid_a, cid_b
-                    );
                 }
             } else {
                 let circuit_a = circuits.get_mut(cid_a).unwrap();
@@ -579,16 +537,6 @@ fn given_example_part1() {
                 circuits_by_id.insert(id_b, cid_a);
                 connection_count += 1;
                 add_pair(&mut already_paired, id_a, id_b);
-                println!(
-                    "Connecting {} and {}",
-                    junction_boxes.get(id_a).unwrap().describe_coords(),
-                    junction_boxes.get(id_b).unwrap().describe_coords()
-                );
-                println!(
-                    "Circuit {} has {} junction boxes",
-                    cid_a,
-                    circuit_a.junction_box_count()
-                );
             }
         } else if b_in_circuit {
             let cid_b = *circuits_by_id.get(&id_b).unwrap();
@@ -597,16 +545,6 @@ fn given_example_part1() {
             circuits_by_id.insert(id_a, cid_b);
             connection_count += 1;
             add_pair(&mut already_paired, id_a, id_b);
-            println!(
-                "Connecting {} and {}",
-                junction_boxes.get(id_a).unwrap().describe_coords(),
-                junction_boxes.get(id_b).unwrap().describe_coords()
-            );
-            println!(
-                "Circuit {} has {} junction boxes",
-                cid_b,
-                circuit_b.junction_box_count()
-            );
         } else {
             let mut circuit_new: Circuit =
                 Circuit::new(junction_boxes.get(id_a).unwrap());
@@ -618,16 +556,6 @@ fn given_example_part1() {
             circuits_by_id.insert(id_b, cid_new);
             connection_count += 1;
             add_pair(&mut already_paired, id_a, id_b);
-            println!(
-                "Connecting {} and {}",
-                junction_boxes.get(id_a).unwrap().describe_coords(),
-                junction_boxes.get(id_b).unwrap().describe_coords()
-            );
-            println!(
-                "Circuit {} has {} junction boxes",
-                cid_new,
-                circuits.get(cid_new).unwrap().junction_box_count()
-            );
         }
     }
 
@@ -641,9 +569,6 @@ fn given_example_part1() {
             largest_circuits.push(usize::MAX);
         }
     }
-    println!("largest_circuits length is {}", largest_circuits.len());
-    println!("{:#?}", largest_circuits);
-    println!("{:#?}", circuits_deleted);
     largest_circuits.sort_by(|a, b| {
         if *a == usize::MAX && *b == usize::MAX {
             Ordering::Equal
