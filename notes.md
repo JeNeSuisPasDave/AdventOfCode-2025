@@ -307,3 +307,9 @@ I removed the square root distance operation, and switched from f64 to u64 dista
 **07:05**
 
 I'm not seeing the problem. I created a list of all pairings, sorted by distance, and manually checked the building of circuits. I never get 5,4,2,2; I always get more 2-box circuits and never get a 4 for the second largest circuit.
+
+**08:13**
+
+Figured it out. If each of the junction boxes in a pair are in different existing circuits, then merge the circuits. Feh. That was in my original code, but I removed it at some early point.
+
+

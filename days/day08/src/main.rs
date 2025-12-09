@@ -124,6 +124,20 @@ impl<'a> Circuit<'a> {
             self.junction_boxes.insert(id, junction_box);
         }
     }
+
+    // Copy the junction box references from the other
+    // circuit into this circuit
+    //
+    fn merge(
+        &mut self,
+        jbs: &'a Vec<JunctionBox>,
+        other_jbs: &Vec<usize>,
+    ) {
+        for other_jb_id in other_jbs {
+            let jb = jbs.get(*other_jb_id).unwrap();
+            self.add(jb);
+        }
+    }
 }
 
 // find the two junction boxes that are closest,
@@ -463,6 +477,7 @@ fn given_example_part1() {
         .to_string();
     let mut junction_boxes: Vec<JunctionBox> = Vec::new();
     let mut circuits: Vec<Circuit> = Vec::new();
+    let mut circuits_deleted: Vec<bool> = Vec::new();
     let mut circuits_by_id: BTreeMap<usize, usize> = BTreeMap::new();
     let re_coord =
         Regex::new(r"^\s*([0-9]+)\s*,\s*([0-9]+)\s*,\s*([0-9]+)\s*$")
@@ -514,14 +529,13 @@ fn given_example_part1() {
         let b_in_circuit = circuits_by_id.contains_key(&id_b);
         if a_in_circuit {
             let cid_a = *circuits_by_id.get(&id_a).unwrap();
-            let circuit_a = circuits.get_mut(cid_a).unwrap();
             if b_in_circuit {
                 let cid_b = *circuits_by_id.get(&id_b).unwrap();
                 if cid_a == cid_b {
                     // both boxes are in the same circuit. Count that
                     // as a connection.
                     //
-                    // connection_count += 1;
+                    connection_count += 1;
                     add_pair(&mut already_paired, id_a, id_b);
                     println!(
                         "RE-Connecting {} and {}",
@@ -534,6 +548,7 @@ fn given_example_part1() {
                             .unwrap()
                             .describe_coords()
                     );
+                    let circuit_a = circuits.get(cid_a).unwrap();
                     println!(
                         "Circuit {} has {} junction boxes",
                         cid_a,
@@ -541,16 +556,25 @@ fn given_example_part1() {
                     );
                 } else {
                     // each box is in a different circuit;
-                    // don't count that as making a connection
+                    // MERGE the circuits
                     //
-                    // connection_count += 1;
+                    let circuit_b = circuits.get(cid_b).unwrap();
+                    let mut jbs: Vec<usize> = Vec::new();
+                    for jb_id in circuit_b.junction_boxes.keys() {
+                        jbs.push(*jb_id);
+                    }
+                    let circuit_a = circuits.get_mut(cid_a).unwrap();
+                    circuit_a.merge(&junction_boxes, &jbs);
+                    circuits_deleted[cid_b] = true;
+                    connection_count += 1;
                     add_pair(&mut already_paired, id_a, id_b);
                     println!(
-                        "Circuits {} and {} are unchanged",
+                        "Circuits {} and {} are MERGED",
                         cid_a, cid_b
                     );
                 }
             } else {
+                let circuit_a = circuits.get_mut(cid_a).unwrap();
                 circuit_a.add(junction_boxes.get(id_b).unwrap());
                 circuits_by_id.insert(id_b, cid_a);
                 connection_count += 1;
@@ -588,6 +612,7 @@ fn given_example_part1() {
                 Circuit::new(junction_boxes.get(id_a).unwrap());
             circuit_new.add(junction_boxes.get(id_b).unwrap());
             circuits.push(circuit_new);
+            circuits_deleted.push(false);
             let cid_new = circuits.len() - 1;
             circuits_by_id.insert(id_a, cid_new);
             circuits_by_id.insert(id_b, cid_new);
@@ -608,28 +633,48 @@ fn given_example_part1() {
 
     // sort circuits by size and id
     //
-    let mut largest_circuits: Vec<usize> =
-        (0..circuits.len()).collect();
-    println!("largest_circuits length is {}", largest_circuits.len());
-    largest_circuits.sort_by(|a, b| {
-        let c_a: &Circuit = circuits.get(*a).unwrap();
-        let c_b: &Circuit = circuits.get(*b).unwrap();
-        if c_a.junction_box_count() > c_b.junction_box_count() {
-            Ordering::Less
-        } else if c_a.junction_box_count() < c_b.junction_box_count() {
-            Ordering::Greater
+    let mut largest_circuits: Vec<usize> = Vec::new();
+    for i in 0..circuits.len() {
+        if !circuits_deleted[i] {
+            largest_circuits.push(i);
         } else {
+            largest_circuits.push(usize::MAX);
+        }
+    }
+    println!("largest_circuits length is {}", largest_circuits.len());
+    println!("{:#?}", largest_circuits);
+    println!("{:#?}", circuits_deleted);
+    largest_circuits.sort_by(|a, b| {
+        if *a == usize::MAX && *b == usize::MAX {
             Ordering::Equal
+        } else if *a == usize::MAX {
+            Ordering::Greater
+        } else if *b == usize::MAX {
+            Ordering::Less
+        } else {
+            let c_a: &Circuit = circuits.get(*a).unwrap();
+            let c_b: &Circuit = circuits.get(*b).unwrap();
+            if c_a.junction_box_count() > c_b.junction_box_count() {
+                Ordering::Less
+            } else if c_a.junction_box_count()
+                < c_b.junction_box_count()
+            {
+                Ordering::Greater
+            } else {
+                Ordering::Equal
+            }
         }
     });
     let mut actual_product: usize = 1;
 
     for i in largest_circuits.iter() {
-        println!(
-            "largest {} has {} boxes",
-            i,
-            circuits[*i].junction_box_count()
-        );
+        if *i != usize::MAX {
+            println!(
+                "largest {} has {} boxes",
+                i,
+                circuits[*i].junction_box_count()
+            );
+        }
     }
     for i in 0..productoflargest {
         actual_product *= circuits
