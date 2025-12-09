@@ -424,8 +424,7 @@ fn list_sizes_of_largest_circuits_fast(
         if connection_count >= upto {
             break;
         }
-        let (id_a, id_b): (usize, usize) = produce_pair(key);
-        let dist: u64 = *distance_by_pair.get(key).unwrap();
+        let (id_a, id_b): (usize, usize) = produce_pair(key)
         let a_in_circuit = circuits_by_id.contains_key(&id_a);
         let b_in_circuit = circuits_by_id.contains_key(&id_b);
         if a_in_circuit {
