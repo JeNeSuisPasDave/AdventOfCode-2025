@@ -294,3 +294,12 @@ Also, I got a hint about discovered neighbors already being in a circuit count t
 
 I spent a lot of time on this and haven't solved it (with the example input) yet. I'm close, but I'm getting circuits sized 4,3,2,2,2 instead of 5,4,2,2. Some subtle bug. I need sleep and fresh eyes.
 
+*Tuesday, 2025-12-09*
+
+**04:30**
+
+I just realized I don't need to do the square root to calculation the distance. Which means I don't need any f64 values. It could be that fixing that will eliminate my bug.
+
+**04:55**
+
+I removed the square root distance operation, and switched from f64 to u64 distance units. Unfortunately, the bug remains.

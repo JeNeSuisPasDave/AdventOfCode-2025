@@ -36,29 +36,21 @@ enum CircuitMergeKind {
 
 #[derive(Debug)]
 struct Point {
-    x: i32,
-    y: i32,
-    z: i32,
+    x: i64,
+    y: i64,
+    z: i64,
 }
 
 impl Point {
-    fn new(x: i32, y: i32, z: i32) -> Self {
+    fn new(x: i64, y: i64, z: i64) -> Self {
         Point { x: x, y: y, z: z }
     }
 
-    fn distance_from(&self, other: &Point) -> f64 {
-        let mut p1 = [0.0_f64; 3];
-        let mut p2 = [0.0_f64; 3];
-        p1[0] = f64::from(self.x);
-        p1[1] = f64::from(self.y);
-        p1[2] = f64::from(self.z);
-        p2[0] = f64::from(other.x);
-        p2[1] = f64::from(other.y);
-        p2[2] = f64::from(other.z);
-        let sum_of_squares: f64 = (p1[0] - p2[0]).abs().powi(2)
-            + (p1[1] - p2[1]).abs().powi(2)
-            + (p1[2] - p2[2]).abs().powi(2);
-        sum_of_squares.sqrt()
+    fn distance_from(&self, other: &Point) -> u64 {
+        let dx: u64 = (self.x - other.x).abs().try_into().unwrap();
+        let dy: u64 = (self.y - other.y).abs().try_into().unwrap();
+        let dz: u64 = (self.z - other.z).abs().try_into().unwrap();
+        dx * dx + dy * dy + dz * dz
     }
 }
 
@@ -69,7 +61,7 @@ struct JunctionBox {
 }
 
 impl JunctionBox {
-    fn new(x: i32, y: i32, z: i32, id: usize) -> Self {
+    fn new(x: i64, y: i64, z: i64, id: usize) -> Self {
         let p: Point = Point::new(x, y, z);
         JunctionBox {
             location: p,
@@ -77,7 +69,7 @@ impl JunctionBox {
         }
     }
 
-    fn distance_from(&self, other: &Self) -> f64 {
+    fn distance_from(&self, other: &Self) -> u64 {
         self.location.distance_from(&other.location)
     }
 
@@ -142,9 +134,9 @@ impl<'a> Circuit<'a> {
 fn find_closest_pairs(
     junction_boxes: &Vec<JunctionBox>,
     already_paired: &BTreeMap<usize, BTreeSet<usize>>,
-    min_dist: f64,
-) -> (usize, usize, f64) {
-    let mut closest_distance = f64::MAX;
+    min_dist: u64,
+) -> (usize, usize, u64) {
+    let mut closest_distance = u64::MAX;
     let mut closest_idx_a = usize::MAX;
     let mut closest_idx_b = usize::MAX;
     let len = junction_boxes.len();
@@ -166,10 +158,10 @@ fn find_closest_pair(
     junction_boxes: &Vec<JunctionBox>,
     already_paired: &BTreeMap<usize, BTreeSet<usize>>,
     rng: Range<usize>,
-    closest_distance: &mut f64,
+    closest_distance: &mut u64,
     closest_idx_a: &mut usize,
     closest_idx_b: &mut usize,
-    min_dist: f64,
+    min_dist: u64,
 ) {
     println!("find_closest_pair(.., {}..{}, ...)", rng.start, rng.end);
     let idx: usize = rng.start;
@@ -266,7 +258,7 @@ fn check_distance_1() {
     let a = JunctionBox::new(162, 187, 812, 0);
     let b = JunctionBox::new(425, 690, 689, 1);
     let dist = a.distance_from(&b);
-    assert!((dist - (580.781370_f64)).abs() < 1e-6);
+    assert_eq!(337307, dist);
 }
 
 #[test]
@@ -274,7 +266,7 @@ fn check_distance_2() {
     let a = JunctionBox::new(739, 650, 466, 0);
     let b = JunctionBox::new(346, 949, 466, 1);
     let dist = a.distance_from(&b);
-    assert!((dist - (493.811705)).abs() < 1e-6);
+    assert_eq!(243850, dist);
 }
 
 // test with example input, one pass
@@ -333,11 +325,11 @@ fn given_example_part1() {
         }
         let coords = re_coord.captures(&line).unwrap();
         let xs = coords.get(1).unwrap().as_str();
-        let x = xs.parse::<i32>().unwrap();
+        let x = xs.parse::<i64>().unwrap();
         let ys = coords.get(2).unwrap().as_str();
-        let y = ys.parse::<i32>().unwrap();
+        let y = ys.parse::<i64>().unwrap();
         let zs = coords.get(3).unwrap().as_str();
-        let z = zs.parse::<i32>().unwrap();
+        let z = zs.parse::<i64>().unwrap();
         let junction_box: JunctionBox = JunctionBox::new(x, y, z, idx);
         junction_boxes.push(junction_box);
         idx += 1;
@@ -346,7 +338,7 @@ fn given_example_part1() {
 
     // find the n closest junction boxeds
     //
-    let mut min_dist = 0_f64;
+    let mut min_dist = 0_u64;
     let mut connection_count: usize = 0;
     let mut already_paired: BTreeMap<usize, BTreeSet<usize>> =
         BTreeMap::new();
