@@ -1,4 +1,5 @@
 use ::std::cmp::Ordering;
+use ::std::collections::{BTreeMap, BTreeSet};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::ops::Range;
@@ -62,189 +63,174 @@ impl Point {
 }
 
 #[derive(Debug)]
-struct Circuit {
-    boxes: Vec<Point>,
-    first_idx: usize,
-    last_idx: usize,
+struct JunctionBox {
+    location: Point,
+    id: usize,
 }
 
-impl Circuit {
+impl JunctionBox {
+    fn new(x: i32, y: i32, z: i32, id: usize) -> Self {
+        let p: Point = Point::new(x, y, z);
+        JunctionBox {
+            location: p,
+            id: id,
+        }
+    }
+
+    fn distance_from(&self, other: &Self) -> f64 {
+        self.location.distance_from(&other.location)
+    }
+
+    fn describe_coords(&self) -> String {
+        format!(
+            "({},{},{})",
+            self.location.x, self.location.y, self.location.z
+        )
+    }
+}
+
+#[derive(Debug)]
+struct Circuit<'a> {
+    // contains references to junction boxes that make
+    // up this circuit
+    //
+    junction_boxes: BTreeMap<usize, &'a JunctionBox>,
+}
+
+impl<'a> Circuit<'a> {
     // constructor
     //
-    fn new(point: Point) -> Self {
-        let mut boxes: Vec<Point> = Vec::new();
-        boxes.push(point);
+    fn new(junction_box: &'a JunctionBox) -> Self {
+        let mut junction_boxes: BTreeMap<usize, &JunctionBox> =
+            BTreeMap::new();
+        let id: usize = junction_box.id;
+        junction_boxes.insert(id, junction_box);
         Circuit {
-            boxes: boxes,
-            first_idx: 0,
-            last_idx: 0,
+            junction_boxes: junction_boxes,
         }
     }
 
     // returns the number of junction boxes in the circuit
     //
-    fn box_count(&self) -> usize {
-        self.boxes.len()
+    fn junction_box_count(&self) -> usize {
+        self.junction_boxes.len()
     }
 
-    // returns the location of the first box in the circuit
+    // Returns true if this Circuit object contains
+    // a junction box with the given id; otherwise, false.
     //
-    fn first_location(&self) -> &Point {
-        self.boxes.get(self.first_idx).unwrap()
+    fn contains_junction_box(&self, id: usize) -> bool {
+        self.junction_boxes.contains_key(&id)
     }
 
-    // returns the location of the last box in the circuit
+    // Add a reference to a junction box to this circuit,
+    // if the circuit doesn't already contain it.
     //
-    fn last_location(&self) -> &Point {
-        self.boxes.get(self.last_idx).unwrap()
-    }
-
-    fn merge_with(
-        &mut self,
-        other: &mut Self,
-        guide: CircuitMergeKind,
-    ) {
-        match guide {
-            CircuitMergeKind::FirstToFirst => {
-                while 0 < other.boxes.len() {
-                    let p = other.boxes.remove(0);
-                    self.boxes.insert(0, p);
-                }
-            }
-            CircuitMergeKind::FirstToLast => {
-                while 0 < other.boxes.len() {
-                    let p = other.boxes.pop().unwrap();
-                    self.boxes.insert(0, p);
-                }
-            }
-            CircuitMergeKind::LastToFirst => {
-                while 0 < other.boxes.len() {
-                    let p = other.boxes.remove(0);
-                    self.boxes.push(p);
-                }
-            }
-            CircuitMergeKind::LastToLast => {
-                while 0 < other.boxes.len() {
-                    let p = other.boxes.pop().unwrap();
-                    self.boxes.push(p);
-                }
-            }
+    fn add(&mut self, junction_box: &'a JunctionBox) {
+        if !self.contains_junction_box(junction_box.id) {
+            let id: usize = junction_box.id;
+            self.junction_boxes.insert(id, junction_box);
         }
-        self.first_idx = 0;
-        self.last_idx = self.boxes.len() - 1;
     }
 }
 
-// find the closest two circuits
+// find the two junction boxes that are closest,
+// but farther than some minimum
 //
-// Returns (index of circuit being compared,
-// index of closest circuit, circuit merge instructions)
+// Returns ids of the boxes and the distance.
 //
-fn find_closest_circuits(
-    circuits: &Vec<Circuit>,
-) -> (usize, usize, CircuitMergeKind) {
+fn find_closest_pairs(
+    junction_boxes: &Vec<JunctionBox>,
+    already_paired: &BTreeMap<usize, BTreeSet<usize>>,
+    min_dist: f64,
+) -> (usize, usize, f64) {
     let mut closest_distance = f64::MAX;
     let mut closest_idx_a = usize::MAX;
     let mut closest_idx_b = usize::MAX;
-    let mut closest_mrginst = CircuitMergeKind::FirstToFirst;
-    let len = circuits.len();
-    find_closest_circuit(
-        circuits,
+    let len = junction_boxes.len();
+    find_closest_pair(
+        junction_boxes,
+        already_paired,
         0..len,
         &mut closest_distance,
         &mut closest_idx_a,
         &mut closest_idx_b,
-        &mut closest_mrginst,
+        min_dist,
     );
-    (closest_idx_a, closest_idx_b, closest_mrginst)
+    (closest_idx_a, closest_idx_b, closest_distance)
 }
 
-fn find_closest_circuit(
-    circuits: &Vec<Circuit>,
+// over the given range, find the closest boxes
+//
+fn find_closest_pair(
+    junction_boxes: &Vec<JunctionBox>,
+    already_paired: &BTreeMap<usize, BTreeSet<usize>>,
     rng: Range<usize>,
     closest_distance: &mut f64,
     closest_idx_a: &mut usize,
     closest_idx_b: &mut usize,
-    closest_mrginst: &mut CircuitMergeKind,
+    min_dist: f64,
 ) {
+    println!("find_closest_pair(.., {}..{}, ...)", rng.start, rng.end);
     let idx: usize = rng.start;
     let end: usize = rng.end;
     if 1 >= (end - idx) {
         return;
     }
     let start = idx + 1;
-    find_closest_circuit(
-        circuits,
+    find_closest_pair(
+        junction_boxes,
+        already_paired,
         start..end,
         closest_distance,
         closest_idx_a,
         closest_idx_b,
-        closest_mrginst,
+        min_dist,
     );
     for other_idx in start..end {
-        let a: &Circuit = &(circuits[idx]);
-        let b: &Circuit = &(circuits[other_idx]);
-        // if both circuits have multiple boxes, don't
-        // consider because we are only connecting isolated
-        // junction boxes
+        let a: &JunctionBox = &(junction_boxes[idx]);
+        let b: &JunctionBox = &(junction_boxes[other_idx]);
+        // make sure we haven't already paired these
         //
-        if (1 < a.box_count()) && (1 < b.box_count()) {
-            continue;
+        if already_paired.contains_key(&idx) {
+            let paired_with = already_paired.get(&idx).unwrap();
+            if paired_with.contains(&other_idx) {
+                continue;
+            }
         }
-        // otherwise, at least one circuit is isolated, so
-        // consider the distance to it
-        //
-        let mut d =
-            a.first_location().distance_from(b.first_location());
-        if d < *closest_distance {
+        let d = a.distance_from(b);
+        if (d >= min_dist) && (d < *closest_distance) {
             *closest_distance = d;
-            *closest_idx_a = idx;
-            *closest_idx_b = other_idx;
-            *closest_mrginst = CircuitMergeKind::FirstToFirst;
+            *closest_idx_a = a.id;
+            *closest_idx_b = b.id;
             println!(
                 "close: {}, {}, {}",
                 closest_idx_a, closest_idx_b, closest_distance
             );
         }
-        if 0 < a.box_count() {
-            d = a.last_location().distance_from(b.first_location());
-            if d < *closest_distance {
-                *closest_distance = d;
-                *closest_idx_a = idx;
-                *closest_idx_b = other_idx;
-                *closest_mrginst = CircuitMergeKind::LastToFirst;
-                println!(
-                    "close: {}, {}, {}",
-                    closest_idx_a, closest_idx_b, closest_distance
-                );
-            }
-        }
-        if 0 < b.box_count() {
-            d = a.first_location().distance_from(b.last_location());
-            if d < *closest_distance {
-                *closest_distance = d;
-                *closest_idx_a = idx;
-                *closest_idx_b = other_idx;
-                *closest_mrginst = CircuitMergeKind::FirstToLast;
-                println!(
-                    "close: {}, {}, {}",
-                    closest_idx_a, closest_idx_b, closest_distance
-                );
-            }
-            if 0 < a.box_count() {
-                d = a.last_location().distance_from(b.last_location());
-                if d < *closest_distance {
-                    *closest_distance = d;
-                    *closest_idx_a = idx;
-                    *closest_idx_b = other_idx;
-                    *closest_mrginst = CircuitMergeKind::LastToLast;
-                    println!(
-                        "close: {}, {}, {}",
-                        closest_idx_a, closest_idx_b, closest_distance
-                    );
-                }
-            }
-        }
+    }
+}
+
+fn add_pair(
+    already_paired: &mut BTreeMap<usize, BTreeSet<usize>>,
+    id_a: usize,
+    id_b: usize,
+) {
+    if !already_paired.contains_key(&id_a) {
+        let paired_with: BTreeSet<usize> = BTreeSet::new();
+        already_paired.insert(id_a, paired_with);
+    }
+    if !already_paired.contains_key(&id_b) {
+        let paired_with: BTreeSet<usize> = BTreeSet::new();
+        already_paired.insert(id_b, paired_with);
+    }
+    let paired_with = already_paired.get_mut(&id_a).unwrap();
+    if (!paired_with.contains(&id_b)) {
+        paired_with.insert(id_b);
+    }
+    let paired_with = already_paired.get_mut(&id_b).unwrap();
+    if (!paired_with.contains(&id_a)) {
+        paired_with.insert(id_a);
     }
 }
 
@@ -277,16 +263,16 @@ fn main() -> Result<()> {
 
 #[test]
 fn check_distance_1() {
-    let a = Point::new(162, 187, 812);
-    let b = Point::new(425, 690, 689);
+    let a = JunctionBox::new(162, 187, 812, 0);
+    let b = JunctionBox::new(425, 690, 689, 1);
     let dist = a.distance_from(&b);
     assert!((dist - (580.781370_f64)).abs() < 1e-6);
 }
 
 #[test]
 fn check_distance_2() {
-    let a = Point::new(739, 650, 466);
-    let b = Point::new(346, 949, 466);
+    let a = JunctionBox::new(739, 650, 466, 0);
+    let b = JunctionBox::new(346, 949, 466, 1);
     let dist = a.distance_from(&b);
     assert!((dist - (493.811705)).abs() < 1e-6);
 }
@@ -294,7 +280,7 @@ fn check_distance_2() {
 // test with example input, one pass
 //
 #[test]
-fn given_example_part1_full() {
+fn given_example_part1() {
     // the maximum number of circuits to assemble
     let upto: usize = 10;
     // the number of the largest circuits from which
@@ -322,7 +308,9 @@ fn given_example_part1_full() {
 984,92,344
 425,690,689"
         .to_string();
+    let mut junction_boxes: Vec<JunctionBox> = Vec::new();
     let mut circuits: Vec<Circuit> = Vec::new();
+    let mut circuits_by_id: BTreeMap<usize, usize> = BTreeMap::new();
     let re_coord =
         Regex::new(r"^\s*([0-9]+)\s*,\s*([0-9]+)\s*,\s*([0-9]+)\s*$")
             .unwrap();
@@ -350,26 +338,119 @@ fn given_example_part1_full() {
         let y = ys.parse::<i32>().unwrap();
         let zs = coords.get(3).unwrap().as_str();
         let z = zs.parse::<i32>().unwrap();
-        let p: Point = Point::new(x, y, z);
-        let circuit: Circuit = Circuit::new(p);
-        circuits.push(circuit);
+        let junction_box: JunctionBox = JunctionBox::new(x, y, z, idx);
+        junction_boxes.push(junction_box);
         idx += 1;
     }
-    println!("Read in {} points", circuits.len());
+    println!("Read in {} points", junction_boxes.len());
 
-    // find the n closest circuits
+    // find the n closest junction boxeds
     //
-    for _i in 0..upto {
-        let (idx_a, idx_b, mrginst) = find_closest_circuits(&circuits);
-        let mut circuit_b: Circuit = circuits.remove(idx_b);
-        let circuit_a: &mut Circuit = circuits.get_mut(idx_a).unwrap();
-        println!("merging {} with {}", idx_a, idx_b);
-        circuit_a.merge_with(&mut circuit_b, mrginst);
-        println!(
-            "merged ... count: {}; circuits count: {}",
-            circuit_a.box_count(),
-            circuits.len()
+    let mut min_dist = 0_f64;
+    let mut connection_count: usize = 0;
+    let mut already_paired: BTreeMap<usize, BTreeSet<usize>> =
+        BTreeMap::new();
+    while connection_count < upto {
+        let (id_a, id_b, dist) = find_closest_pairs(
+            &junction_boxes,
+            &already_paired,
+            min_dist,
         );
+        min_dist = dist;
+        let a_in_circuit = circuits_by_id.contains_key(&id_a);
+        let b_in_circuit = circuits_by_id.contains_key(&id_b);
+        if a_in_circuit {
+            let cid_a = *circuits_by_id.get(&id_a).unwrap();
+            let circuit_a = circuits.get_mut(cid_a).unwrap();
+            if b_in_circuit {
+                let cid_b = *circuits_by_id.get(&id_b).unwrap();
+                if cid_a == cid_b {
+                    // both boxes are in the same circuit. Count that
+                    // as a connection.
+                    //
+                    connection_count += 1;
+                    add_pair(&mut already_paired, id_a, id_b);
+                    println!(
+                        "RE-Connecting {} and {}",
+                        junction_boxes
+                            .get(id_a)
+                            .unwrap()
+                            .describe_coords(),
+                        junction_boxes
+                            .get(id_b)
+                            .unwrap()
+                            .describe_coords()
+                    );
+                    println!(
+                        "Circuit {} has {} junction boxes",
+                        cid_a,
+                        circuit_a.junction_box_count()
+                    );
+                } else {
+                    // each box is in a different circuit;
+                    // don't count that as making a connection
+                    //
+                    connection_count += 1;
+                    add_pair(&mut already_paired, id_a, id_b);
+                    println!(
+                        "Circuits {} and {} are unchanged",
+                        cid_a, cid_b
+                    );
+                }
+            } else {
+                circuit_a.add(junction_boxes.get(id_b).unwrap());
+                circuits_by_id.insert(id_b, cid_a);
+                connection_count += 1;
+                add_pair(&mut already_paired, id_a, id_b);
+                println!(
+                    "Connecting {} and {}",
+                    junction_boxes.get(id_a).unwrap().describe_coords(),
+                    junction_boxes.get(id_b).unwrap().describe_coords()
+                );
+                println!(
+                    "Circuit {} has {} junction boxes",
+                    cid_a,
+                    circuit_a.junction_box_count()
+                );
+            }
+        } else if b_in_circuit {
+            let cid_b = *circuits_by_id.get(&id_b).unwrap();
+            let circuit_b = circuits.get_mut(cid_b).unwrap();
+            circuit_b.add(junction_boxes.get(id_a).unwrap());
+            circuits_by_id.insert(id_a, cid_b);
+            connection_count += 1;
+            add_pair(&mut already_paired, id_a, id_b);
+            println!(
+                "Connecting {} and {}",
+                junction_boxes.get(id_a).unwrap().describe_coords(),
+                junction_boxes.get(id_b).unwrap().describe_coords()
+            );
+            println!(
+                "Circuit {} has {} junction boxes",
+                cid_b,
+                circuit_b.junction_box_count()
+            );
+        } else {
+            let mut circuit_new: Circuit =
+                Circuit::new(junction_boxes.get(id_a).unwrap());
+            circuit_new.add(junction_boxes.get(id_b).unwrap());
+            circuits.push(circuit_new);
+            let cid_new = circuits.len() - 1;
+            circuits_by_id.insert(id_a, cid_new);
+            circuits_by_id.insert(id_b, cid_new);
+            connection_count += 1;
+            add_pair(&mut already_paired, id_a, id_b);
+            println!(
+                "Connecting {} and {}",
+                junction_boxes.get(id_a).unwrap().describe_coords(),
+                junction_boxes.get(id_b).unwrap().describe_coords()
+            );
+            println!(
+                "Circuit {} has {} junction boxes",
+                cid_new,
+                circuits.get(cid_new).unwrap().junction_box_count()
+            );
+        }
     }
 
     // sort circuits by size and id
@@ -378,12 +459,11 @@ fn given_example_part1_full() {
         (0..circuits.len()).collect();
     println!("largest_circuits length is {}", largest_circuits.len());
     largest_circuits.sort_by(|a, b| {
-        println!("Compare {} with {}", a, b);
         let c_a: &Circuit = circuits.get(*a).unwrap();
         let c_b: &Circuit = circuits.get(*b).unwrap();
-        if c_a.box_count() > c_b.box_count() {
+        if c_a.junction_box_count() > c_b.junction_box_count() {
             Ordering::Less
-        } else if c_a.box_count() < c_b.box_count() {
+        } else if c_a.junction_box_count() < c_b.junction_box_count() {
             Ordering::Greater
         } else {
             Ordering::Equal
@@ -395,91 +475,14 @@ fn given_example_part1_full() {
         println!(
             "largest {} has {} boxes",
             i,
-            circuits[*i].box_count()
+            circuits[*i].junction_box_count()
         );
     }
     for i in 0..productoflargest {
-        actual_product *=
-            circuits.get(largest_circuits[i]).unwrap().box_count();
+        actual_product *= circuits
+            .get(largest_circuits[i])
+            .unwrap()
+            .junction_box_count();
     }
     assert_eq!(expected_product, actual_product);
-}
-
-// test with example input, one pass
-//
-#[test]
-fn given_example_part1_pass1() {
-    // the maximum number of circuits to assemble
-    let upto: usize = 10;
-    // the number of the largest circuits from which
-    // to produce the product of their sizes
-    let productoflargest: usize = 3;
-    let expected_product: usize = 40;
-    let raw_input = "162,817,812
-57,618,57
-906,360,560
-592,479,940
-352,342,300
-466,668,158
-542,29,236
-431,825,988
-739,650,466
-52,470,668
-216,146,977
-819,987,18
-117,168,530
-805,96,715
-346,949,466
-970,615,88
-941,993,340
-862,61,35
-984,92,344
-425,690,689"
-        .to_string();
-    let mut circuits: Vec<Circuit> = Vec::new();
-    let re_coord =
-        Regex::new(r"^\s*([0-9]+)\s*,\s*([0-9]+)\s*,\s*([0-9]+)\s*$")
-            .unwrap();
-    let input = raw_input.as_str();
-    let lines = input.split('\n');
-    let mut line_num: usize = 0;
-    let mut idx: usize = 0;
-    for line in lines {
-        line_num += 1;
-        let line = line.trim();
-        if 0 == line.len() {
-            continue;
-        }
-        if !re_coord.is_match(&line) {
-            println!(
-                "*** FAILED *** to match line {}: '{}'",
-                line_num, line
-            );
-            continue;
-        }
-        let coords = re_coord.captures(&line).unwrap();
-        let xs = coords.get(1).unwrap().as_str();
-        let x = xs.parse::<i32>().unwrap();
-        let ys = coords.get(2).unwrap().as_str();
-        let y = ys.parse::<i32>().unwrap();
-        let zs = coords.get(3).unwrap().as_str();
-        let z = zs.parse::<i32>().unwrap();
-        let p: Point = Point::new(x, y, z);
-        let circuit: Circuit = Circuit::new(p);
-        circuits.push(circuit);
-        idx += 1;
-    }
-    println!("Read in {} points", circuits.len());
-
-    // find the closest circuits
-    //
-    let (idx_a, idx_b, mrginst) = find_closest_circuits(&circuits);
-    assert_eq!(0, idx_a);
-    assert_eq!(19, idx_b);
-    match mrginst {
-        CircuitMergeKind::FirstToFirst => {}
-        _ => {
-            panic!("unexpected enum value {:#?}", mrginst);
-        }
-    }
 }

@@ -290,3 +290,7 @@ I have to say I'm struggling with understanding the Day 8 Part 1 specs. I was as
 
 Also, I got a hint about discovered neighbors already being in a circuit count toward the "connections made" counter may be critical. I would never have interpreted it that way. We shall see.
 
+**20:58**
+
+I spent a lot of time on this and haven't solved it (with the example input) yet. I'm close, but I'm getting circuits sized 4,3,2,2,2 instead of 5,4,2,2. Some subtle bug. I need sleep and fresh eyes.
+
