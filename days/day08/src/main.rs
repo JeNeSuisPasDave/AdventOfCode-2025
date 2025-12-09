@@ -424,7 +424,7 @@ fn list_sizes_of_largest_circuits_fast(
         if connection_count >= upto {
             break;
         }
-        let (id_a, id_b): (usize, usize) = produce_pair(key)
+        let (id_a, id_b): (usize, usize) = produce_pair(key);
         let a_in_circuit = circuits_by_id.contains_key(&id_a);
         let b_in_circuit = circuits_by_id.contains_key(&id_b);
         if a_in_circuit {
@@ -562,12 +562,17 @@ fn main() -> Result<()> {
         idx += 1;
     }
 
+    println!("found {} junction boxes", junction_boxes.len());
+    println!("upto: {}", upto);
+
     // build the circuits and find the largest
     //
     let circuit_sizes: Vec<usize> =
         list_sizes_of_largest_circuits_fast(*upto, &mut junction_boxes);
+    println!("{:#?}", circuit_sizes);
     let mut actual_product: usize = 1;
-    for i in 0..*productoflargest {
+    let end = *productoflargest;
+    for i in 0..end {
         actual_product *= circuit_sizes[i];
     }
 

@@ -317,3 +317,6 @@ Figured it out. If each of the junction boxes in a pair are in different existin
 Solving with the actual input data was taking way too long. I had to implement a faster algorithm. I'm just calculation all the distances and then sorting. New code is still solving the example correctly, but produces a result of 5292 with the actual input file and AoC says that is too low! 
 
 Taking a break now. Probably for a week.
+
+I did add another example, "example-from-phaul.txt", which, when run with the parameters for 10 passes and product of 3 largest, has the correct results "Part 1 is the three circuit sizes 7, 2, 2 so the answer is 28, and part 2 is 18, 100 so the answer is 1800"
+
