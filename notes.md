@@ -336,3 +336,11 @@ Resuming work. Looking at circuit construction.
 **10:12**
 
 Circuit construction looking good.
+
+**10:37**
+
+Product calculation looking good.
+
+**11:06**
+
+Submitted the correct answer for Part 1
