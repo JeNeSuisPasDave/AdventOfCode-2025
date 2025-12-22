@@ -4,7 +4,6 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::ops::Range;
 use std::path::PathBuf;
-use std::usize;
 
 use anyhow::{Context, Result};
 use clap::{Id, Parser};
@@ -100,6 +99,55 @@ impl JunctionBoxPair {
     }
 }
 
+struct Circuit {
+    jbs: BTreeSet<usize>,
+    id: usize,
+}
+
+impl Circuit {
+    fn new(id: usize) -> Self {
+        let jbs: BTreeSet<usize> = BTreeSet::new();
+        Circuit { jbs: jbs, id: id }
+    }
+
+    fn contains(&self, junction_box_id: usize) -> bool {
+        self.jbs.contains(&junction_box_id)
+    }
+
+    fn describe_circuit(&self) -> String {
+        let l: Vec<String> =
+            self.jbs.iter().map(|x| x.to_string()).collect();
+        l.join(",")
+    }
+
+    fn insert_box(&mut self, junction_box_id: usize) {
+        if !self.jbs.contains(&junction_box_id) {
+            self.jbs.insert(junction_box_id);
+        }
+    }
+
+    fn insert_circuit(&mut self, other: &Self) {
+        for jb_id in other.jbs.iter() {
+            self.insert_box(*jb_id);
+        }
+    }
+
+    fn insert_list(&mut self, other_jbs: &Vec<usize>) {
+        for jb_id in other_jbs.iter() {
+            self.insert_box(*jb_id);
+        }
+    }
+
+    fn insert_pair(&mut self, pair: &JunctionBoxPair) {
+        self.insert_box(pair.first_box_id);
+        self.insert_box(pair.second_box_id);
+    }
+
+    fn len(&self) -> usize {
+        self.jbs.len()
+    }
+}
+
 fn find_distances(
     junction_boxes: &Vec<JunctionBox>,
     pairs_by_first_id: &mut BTreeMap<
@@ -150,8 +198,6 @@ fn sort_pairs_by_distance(
         }
     }
     local_list.sort_by(|a, b| {
-        let d_a: u64 = a.2;
-        let d_b: u64 = b.2;
         if a.2 > b.2 {
             Ordering::Greater
         } else if a.2 < b.2 {
@@ -214,35 +260,102 @@ fn main() -> Result<()> {
     println!("found {} junction boxes", junction_boxes.len());
     println!("upto: {}", upto);
 
-    for jb in junction_boxes.iter() {
-        println!("{}: {}", jb.id, jb.describe_coords());
-    }
+    // for jb in junction_boxes.iter() {
+    //     println!("{}: {}", jb.id, jb.describe_coords());
+    // }
 
     let len = junction_boxes.len();
     let mut pairs: BTreeMap<usize, BTreeMap<usize, JunctionBoxPair>> =
         BTreeMap::new();
     find_distances(&junction_boxes, &mut pairs, 0..len);
 
-    for key_a in pairs.keys() {
-        let paired_with = pairs.get(key_a).unwrap();
-        for key_b in paired_with.keys() {
-            let jb = paired_with.get(key_b).unwrap();
-            println!(
-                "{}-{}: {}",
-                jb.first_box_id, jb.second_box_id, jb.distance
-            );
-        }
-    }
+    // for key_a in pairs.keys() {
+    //     let paired_with = pairs.get(key_a).unwrap();
+    //     for key_b in paired_with.keys() {
+    //         let jb = paired_with.get(key_b).unwrap();
+    //         println!(
+    //             "{}-{}: {}",
+    //             jb.first_box_id, jb.second_box_id, jb.distance
+    //         );
+    //     }
+    // }
 
     let mut sorted_pairs: Vec<(usize, usize)> = Vec::new();
     sort_pairs_by_distance(&pairs, &mut sorted_pairs);
 
     println!("SORTED:");
-    for (key_a, key_b) in sorted_pairs {
+    let mut count = 0;
+    for (key_a, key_b) in sorted_pairs.iter() {
+        if count >= *upto {
+            break;
+        }
         let jb = pairs.get(&key_a).unwrap().get(&key_b).unwrap();
         println!(
             "{}-{}: {}",
             jb.first_box_id, jb.second_box_id, jb.distance
+        );
+        count += 1;
+    }
+
+    let mut next_id: usize = 0;
+    let mut circuits: BTreeMap<usize, Circuit> = BTreeMap::new();
+    let upto = usize::min(*upto, sorted_pairs.len());
+    for pass in 0..upto {
+        let (id_a, id_b) = sorted_pairs[pass];
+        println!("({}-{})", id_a, id_b);
+        let circuit_ids: Vec<usize> =
+            circuits.keys().map(|x| *x).collect();
+        let mut target_circuit_ids: Vec<usize> = Vec::new();
+        for id in circuit_ids {
+            let circuit = circuits.get_mut(&id).unwrap();
+            if circuit.contains(id_a) || circuit.contains(id_b) {
+                target_circuit_ids.push(id);
+            }
+        }
+        if 0 == target_circuit_ids.len() {
+            let mut new_circuit = Circuit::new(next_id);
+            next_id += 1;
+            new_circuit.insert_box(id_a);
+            new_circuit.insert_box(id_b);
+            circuits.insert(new_circuit.id, new_circuit);
+        } else {
+            // add the pair to the existing circuit
+            //
+            let target =
+                circuits.get_mut(&target_circuit_ids[0]).unwrap();
+            target.insert_box(id_a);
+            target.insert_box(id_b);
+            // does the pair reference another circuit?
+            //
+            if (1 < target_circuit_ids.len())
+                && (target_circuit_ids[0] != target_circuit_ids[1])
+            {
+                // if so, then merge the two circuits
+                //
+                let other =
+                    circuits.get(&target_circuit_ids[1]).unwrap();
+                let other_jbs: Vec<usize> =
+                    other.jbs.iter().map(|x| *x).collect();
+                let target =
+                    circuits.get_mut(&target_circuit_ids[0]).unwrap();
+                target.insert_list(&other_jbs);
+                circuits.remove(&target_circuit_ids[1]);
+            }
+        }
+        let mut bld: Vec<String> = Vec::new();
+        for c_id in circuits.keys() {
+            let circuit = circuits.get(c_id).unwrap();
+            bld.push(format!("[{}]", circuit.describe_circuit()));
+        }
+        println!("{}", bld.join(" "));
+    }
+
+    println!("CIRCUITS:");
+    for circuit_id in circuits.keys() {
+        println!(
+            "{}: {}",
+            circuit_id,
+            circuits[circuit_id].describe_circuit()
         );
     }
 

@@ -329,3 +329,10 @@ Trying again, after a long break. The existing code could not produce correct re
 **04:52**
 
 I've produced sorted lists of box pairs and have manual constructed the correct circuits for the two examples. I'm confident my sorted pairs of junction boxes are correct. Now I need to make a new implementation of circuit building to see if I can automated the manual circuit construction. 
+**08:30**
+
+Resuming work. Looking at circuit construction.
+
+**10:12**
+
+Circuit construction looking good.
