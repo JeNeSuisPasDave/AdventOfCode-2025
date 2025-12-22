@@ -318,5 +318,14 @@ Solving with the actual input data was taking way too long. I had to implement a
 
 Taking a break now. Probably for a week.
 
-I did add another example, "example-from-phaul.txt", which, when run with the parameters for 10 passes and product of 3 largest, has the correct results "Part 1 is the three circuit sizes 7, 2, 2 so the answer is 28, and part 2 is 18, 100 so the answer is 1800"
+I did add another example, "example-from-phaul.txt", which, when run with the parameters for 10 passes and product of 3 largest, has the correct results of "Part 1 is the three circuit sizes 7, 2, 2 so the answer is 28, and part 2 is 18, 100 so the answer is 1800"
 
+*Monday, 2025-12-22*
+
+**02:56**
+
+Trying again, after a long break. The existing code could not produce correct results with the 'phaul' example input and does not produce correct results with the actual input. I'm going to try again and see whether I can identify my misunderstanding of the specification.
+
+**04:52**
+
+I've produced sorted lists of box pairs and have manual constructed the correct circuits for the two examples. I'm confident my sorted pairs of junction boxes are correct. Now I need to make a new implementation of circuit building to see if I can automated the manual circuit construction. 
