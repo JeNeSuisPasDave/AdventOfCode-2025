@@ -21,7 +21,7 @@ use regex::Regex;
 struct Cli {
     /// whether to connect all junction boxes
     #[arg(long = "connect-all")]
-    connectall: Option<bool>,
+    connectall: bool,
     /// the maximum number of circuits to assemble,
     /// default 10
     #[arg(short = 'c', long = "connection-attempts")]
@@ -223,6 +223,8 @@ fn sort_pairs_by_distance(
 fn build_circuits(
     upto: &usize,
     sorted_pairs: &Vec<(usize, usize)>,
+    last_two: &mut (usize, usize),
+    jb_count: usize,
 ) -> BTreeMap<usize, Circuit> {
     let mut next_id: usize = 0;
     let mut circuits: BTreeMap<usize, Circuit> = BTreeMap::new();
@@ -232,6 +234,16 @@ fn build_circuits(
         // println!("({}-{})", id_a, id_b);
         let circuit_ids: Vec<usize> =
             circuits.keys().map(|x| *x).collect();
+        // if we have one circuit containing all the boxes,
+        // then stop building
+        //
+        if 1 == circuit_ids.len() {
+            let cid = circuit_ids.get(0).unwrap();
+            let c = circuits.get(&cid).unwrap();
+            if jb_count <= c.len() {
+                break;
+            }
+        }
         let mut target_circuit_ids: Vec<usize> = Vec::new();
         for id in circuit_ids {
             let circuit = circuits.get_mut(&id).unwrap();
@@ -245,6 +257,8 @@ fn build_circuits(
             new_circuit.insert_box(id_a);
             new_circuit.insert_box(id_b);
             circuits.insert(new_circuit.id, new_circuit);
+            last_two.0 = id_a;
+            last_two.1 = id_b;
         } else {
             // add the pair to the existing circuit
             //
@@ -254,7 +268,10 @@ fn build_circuits(
             target.insert_box(id_b);
             // does the pair reference another circuit?
             //
-            if (1 < target_circuit_ids.len())
+            if (1 == target_circuit_ids.len()) {
+                last_two.0 = id_a;
+                last_two.1 = id_b;
+            } else if (1 < target_circuit_ids.len())
                 && (target_circuit_ids[0] != target_circuit_ids[1])
             {
                 // if so, then merge the two circuits
@@ -267,6 +284,8 @@ fn build_circuits(
                     circuits.get_mut(&target_circuit_ids[0]).unwrap();
                 target.insert_list(&other_jbs);
                 circuits.remove(&target_circuit_ids[1]);
+                last_two.0 = id_a;
+                last_two.1 = id_b;
             }
         }
         // let mut bld: Vec<String> = Vec::new();
@@ -315,10 +334,7 @@ fn main() -> Result<()> {
     if let Some(x) = args.productoflargest {
         productoflargest = x;
     }
-    let mut connect_all = false;
-    if let Some(x) = args.connectall {
-        connect_all = true;
-    }
+    let connect_all = args.connectall;
     let path = &args.path;
 
     let f = File::open(path).with_context(|| {
@@ -360,7 +376,6 @@ fn main() -> Result<()> {
     }
 
     println!("found {} junction boxes", junction_boxes.len());
-    println!("upto: {}", upto);
 
     // for jb in junction_boxes.iter() {
     //     println!("{}: {}", jb.id, jb.describe_coords());
@@ -385,10 +400,15 @@ fn main() -> Result<()> {
     let mut sorted_pairs: Vec<(usize, usize)> = Vec::new();
     sort_pairs_by_distance(&pairs, &mut sorted_pairs);
 
+    if connect_all {
+        upto = usize::MAX;
+    }
+    println!("upto: {}", upto);
+
     // println!("SORTED:");
     // let mut count = 0;
     // for (key_a, key_b) in sorted_pairs.iter() {
-    //     if count >= *upto {
+    //     if count >= upto {
     //         break;
     //     }
     //     let jb = pairs.get(&key_a).unwrap().get(&key_b).unwrap();
@@ -399,7 +419,13 @@ fn main() -> Result<()> {
     //     count += 1;
     // }
 
-    let mut circuits = build_circuits(&upto, &sorted_pairs);
+    let mut last_two: (usize, usize) = (0, 0);
+    let circuits = build_circuits(
+        &upto,
+        &sorted_pairs,
+        &mut last_two,
+        junction_boxes.len(),
+    );
 
     // println!("CIRCUITS:");
     // for circuit_id in circuits.keys() {
@@ -410,17 +436,29 @@ fn main() -> Result<()> {
     //     );
     // }
 
-    let sorted_circuits = sort_circuits(&circuits);
-    let mut product: u64 = 1;
-    let limit: usize = productoflargest;
-    for i in 0..limit {
-        let len: u64 = u64::try_from(sorted_circuits[i].1).unwrap();
-        product *= len;
+    if connect_all {
+        let product: u64 = u64::try_from(
+            junction_boxes[last_two.0].location.x
+                * junction_boxes[last_two.1].location.x,
+        )
+        .unwrap();
+        println!(
+            "Product of the x coord of last two boxes connected is {}",
+            product
+        );
+    } else {
+        let sorted_circuits = sort_circuits(&circuits);
+        let mut product: u64 = 1;
+        let limit: usize = productoflargest;
+        for i in 0..limit {
+            let len: u64 = u64::try_from(sorted_circuits[i].1).unwrap();
+            product *= len;
+        }
+        println!(
+            "Product of the largest {} circuits is {}",
+            productoflargest, product
+        );
     }
-    println!(
-        "Product of the largest {} circuits is {}",
-        productoflargest, product
-    );
 
     Ok(())
 }

@@ -352,3 +352,9 @@ Submitted the correct answer for Part 1
 Changed CLI parser to support optional arguments and the new argument
 --connect-all, in order to get ready for part 2 implementation.
 
+**17:34**
+
+I think I'm done with Part 2. Getting the correct answer for both examples.
+
+I spend the most time on getting more familiar with the "clap" crate, a rust CLI argument toolkit.
+
