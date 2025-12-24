@@ -344,3 +344,11 @@ Product calculation looking good.
 **11:06**
 
 Submitted the correct answer for Part 1
+
+*Wednesday, 2025-12-24*
+
+**15:04**
+
+Changed CLI parser to support optional arguments and the new argument
+--connect-all, in order to get ready for part 2 implementation.
+

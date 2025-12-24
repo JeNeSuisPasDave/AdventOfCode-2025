@@ -10,17 +10,26 @@ use clap::{Id, Parser};
 use regex::Regex;
 
 /// Given input file containing the problem set,
-/// establish the circuits and return the product
-/// of the size (junction box count) of the three
-/// argest circuits.
+/// repeatedly connect the next closest junction boxes,
+/// until the specified number of connection attempts were made.
+/// If all boxes are connected, return the product of the last
+/// two connected box's X coordinates; otherwise return the
+/// product of the sizes of the largest n circuits, where
+/// n is specified with the --product-terms argument value.
 ///
-#[derive(Parser)]
+#[derive(Parser, Debug)]
 struct Cli {
-    /// the maximum number of circuits to assemble
-    upto: usize,
+    /// whether to connect all junction boxes
+    #[arg(long = "connect-all")]
+    connectall: Option<bool>,
+    /// the maximum number of circuits to assemble,
+    /// default 10
+    #[arg(short = 'c', long = "connection-attempts")]
+    upto: Option<usize>,
     /// the number of the largest circuits from which
-    /// to produce the product of their sizes
-    productoflargest: usize,
+    /// to produce the product of their sizes, default 3
+    #[arg(short = 'p', long = "product-terms")]
+    productoflargest: Option<usize>,
     /// The path to the file containing battery bank specs
     path: PathBuf,
 }
@@ -298,8 +307,18 @@ fn sort_circuits(
 //
 fn main() -> Result<()> {
     let args = Cli::parse();
-    let upto = &args.upto;
-    let productoflargest = &args.productoflargest;
+    let mut upto: usize = 10;
+    if let Some(x) = args.upto {
+        upto = x;
+    }
+    let mut productoflargest: usize = 3;
+    if let Some(x) = args.productoflargest {
+        productoflargest = x;
+    }
+    let mut connect_all = false;
+    if let Some(x) = args.connectall {
+        connect_all = true;
+    }
     let path = &args.path;
 
     let f = File::open(path).with_context(|| {
@@ -380,7 +399,7 @@ fn main() -> Result<()> {
     //     count += 1;
     // }
 
-    let mut circuits = build_circuits(upto, &sorted_pairs);
+    let mut circuits = build_circuits(&upto, &sorted_pairs);
 
     // println!("CIRCUITS:");
     // for circuit_id in circuits.keys() {
@@ -393,7 +412,7 @@ fn main() -> Result<()> {
 
     let sorted_circuits = sort_circuits(&circuits);
     let mut product: u64 = 1;
-    let limit: usize = *productoflargest;
+    let limit: usize = productoflargest;
     for i in 0..limit {
         let len: u64 = u64::try_from(sorted_circuits[i].1).unwrap();
         product *= len;
