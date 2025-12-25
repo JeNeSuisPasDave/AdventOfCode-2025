@@ -372,3 +372,9 @@ NOTE: origin of grid is col 0, row 0; the upper left corner. Coordinates are giv
 
 Got the correct answer for Part 1. Implementation was just naive recursion, examining all red-tile pairs. Nothing clever or efficient. Which makes me worried about part 2.
 
+**05:56**
+
+Added the Part 2 specs. Part 2 is much harder.
+
+I'll add a CLI flag --consider-green to indicate that green tiles should be considered (i.e., use Part 2 logic). Then I think a function to identify all the green tiles. And then a function to see if a red-cornered rectangle contains only green and red tiles.
+
