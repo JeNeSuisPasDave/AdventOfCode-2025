@@ -358,3 +358,17 @@ I think I'm done with Part 2. Getting the correct answer for both examples.
 
 I spend the most time on getting more familiar with the "clap" crate, a rust CLI argument toolkit.
 
+# Day 9
+
+*Thursday, 2025-12-25*
+
+**04:20**
+
+capturing specs for day 9.
+
+NOTE: origin of grid is col 0, row 0; the upper left corner. Coordinates are given as (x,y) or (column,row).
+
+**05:43**
+
+Got the correct answer for Part 1. Implementation was just naive recursion, examining all red-tile pairs. Nothing clever or efficient. Which makes me worried about part 2.
+
