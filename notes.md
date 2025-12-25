@@ -378,3 +378,16 @@ Added the Part 2 specs. Part 2 is much harder.
 
 I'll add a CLI flag --consider-green to indicate that green tiles should be considered (i.e., use Part 2 logic). Then I think a function to identify all the green tiles. And then a function to see if a red-cornered rectangle contains only green and red tiles.
 
+took a break ...
+
+**11:00**
+
+Working on part 2. Wrote code to connect red tiles with green tiles.
+
+**12:05**
+
+Now working on code to display the grid and to fill in the loop with green tiles.
+
+**12:44**
+
+got grid display working. Found bugs in tile insertion and connecting algorithm. Fixed.
