@@ -14,6 +14,9 @@ use regex::Regex;
 ///
 #[derive(Parser, Debug)]
 struct Cli {
+    /// Whether to apply the green tile specifications
+    #[arg(long = "consider-green-tiles")]
+    with_green_tiles: bool,
     /// The path to the file containing red tile coordinates
     path: PathBuf,
 }
@@ -67,6 +70,7 @@ impl Point {
 enum TileColor {
     Red,
     Green,
+    GreenFill,
     Other,
 }
 
@@ -109,6 +113,10 @@ impl TileGrid {
         self.insert_tile(loc, TileColor::Green);
     }
 
+    fn insert_green_fill_tile(&mut self, loc: &Point) {
+        self.insert_tile(loc, TileColor::GreenFill);
+    }
+
     fn insert_red_tile(&mut self, loc: &Point) {
         self.insert_tile(loc, TileColor::Red);
     }
@@ -117,6 +125,7 @@ impl TileGrid {
         match color {
             TileColor::Red => {}
             TileColor::Green => {}
+            TileColor::GreenFill => {}
             _ => {
                 panic!("Unexpected tile color")
             }
@@ -191,11 +200,216 @@ impl TileGrid {
         }
     }
 
+    fn count_left(&self, x: u64, y: u64) -> u64 {
+        let mut count: u64 = 0;
+        let mut looking_for_red = false;
+        let start = 0;
+        let end = x;
+        for i in start..end {
+            match self.get_color(i, y) {
+                TileColor::Other => {}
+                TileColor::GreenFill => {}
+                TileColor::Green => {
+                    if !looking_for_red {
+                        count += 1;
+                    }
+                }
+                TileColor::Red => {
+                    if !looking_for_red {
+                        looking_for_red = true;
+                        count += 1;
+                    } else {
+                        count += 1;
+                        looking_for_red = false;
+                    }
+                }
+            }
+        }
+        count
+    }
+
+    fn count_right(&self, x: u64, y: u64) -> u64 {
+        let mut count: u64 = 0;
+        let mut looking_for_red = false;
+        let start = x + 1;
+        let end = self.max_x + 1;
+        for i in start..end {
+            match self.get_color(i, y) {
+                TileColor::Other => {}
+                TileColor::GreenFill => {}
+                TileColor::Green => {
+                    if !looking_for_red {
+                        count += 1;
+                    }
+                }
+                TileColor::Red => {
+                    if !looking_for_red {
+                        looking_for_red = true;
+                        count += 1;
+                    } else {
+                        count += 1;
+                        looking_for_red = false;
+                    }
+                }
+            }
+        }
+        count
+    }
+
+    fn count_up(&self, x: u64, y: u64) -> u64 {
+        let mut count: u64 = 0;
+        let mut looking_for_red = false;
+        let start = 0;
+        let end = y;
+        for i in start..end {
+            match self.get_color(x, i) {
+                TileColor::Other => {}
+                TileColor::GreenFill => {}
+                TileColor::Green => {
+                    if !looking_for_red {
+                        count += 1;
+                    }
+                }
+                TileColor::Red => {
+                    if !looking_for_red {
+                        looking_for_red = true;
+                        count += 1;
+                    } else {
+                        count += 1;
+                        looking_for_red = false;
+                    }
+                }
+            }
+        }
+        count
+    }
+
+    fn count_down(&self, x: u64, y: u64) -> u64 {
+        let mut count: u64 = 0;
+        let mut looking_for_red = false;
+        let start = y + 1;
+        let end = self.max_y + 1;
+        for i in start..end {
+            match self.get_color(x, i) {
+                TileColor::Other => {}
+                TileColor::GreenFill => {}
+                TileColor::Green => {
+                    if !looking_for_red {
+                        count += 1;
+                    }
+                }
+                TileColor::Red => {
+                    if !looking_for_red {
+                        looking_for_red = true;
+                        count += 1;
+                    } else {
+                        count += 1;
+                        looking_for_red = false;
+                    }
+                }
+            }
+        }
+        count
+    }
+
+    fn is_green_fill(&self, x: u64, y: u64) -> bool {
+        match self.get_color(x, y) {
+            TileColor::GreenFill => true,
+            _ => false,
+        }
+    }
+
+    fn fill_if_neighbors(&mut self) {
+        for y in self.min_y..=self.max_y {
+            for x in self.min_x..=self.max_x {
+                match self.get_color(x, y) {
+                    TileColor::Other => {
+                        if (self.min_x < x)
+                            && (self.is_green_fill(x - 1, y))
+                        {
+                            let loc = Point::new(x, y);
+                            self.insert_green_fill_tile(&loc);
+                            continue;
+                        }
+                        if (self.max_x > x)
+                            && (self.is_green_fill(x + 1, y))
+                        {
+                            let loc = Point::new(x, y);
+                            self.insert_green_fill_tile(&loc);
+                            continue;
+                        }
+                        if (self.min_y < y)
+                            && (self.is_green_fill(x, y - 1))
+                        {
+                            let loc = Point::new(x, y);
+                            self.insert_green_fill_tile(&loc);
+                            continue;
+                        }
+                        if (self.max_y > y)
+                            && (self.is_green_fill(x, y + 1))
+                        {
+                            let loc = Point::new(x, y);
+                            self.insert_green_fill_tile(&loc);
+                            continue;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
+
     fn fill_in_loops(&mut self) {
         for y in self.min_y..=self.max_y {
-            let is_outside = true;
-            for x in self.min_x..=self.max_x {}
+            for x in self.min_x..=self.max_x {
+                match self.get_color(x, y) {
+                    TileColor::Other => {
+                        let c = self.count_left(x, y);
+                        if (0 == c) {
+                            continue;
+                        }
+                        let c = self.count_right(x, y);
+                        if (0 == c) {
+                            continue;
+                        }
+                        let c = self.count_up(x, y);
+                        if (0 == c) {
+                            continue;
+                        }
+                        let c = self.count_down(x, y);
+                        if (0 == c) {
+                            continue;
+                        }
+                        let c = self.count_left(x, y);
+                        if (1 == (c % 2)) {
+                            let loc = Point::new(x, y);
+                            self.insert_green_fill_tile(&loc);
+                            continue;
+                        }
+                        let c = self.count_right(x, y);
+                        if (1 == (c % 2)) {
+                            let loc = Point::new(x, y);
+                            self.insert_green_fill_tile(&loc);
+                            continue;
+                        }
+                        let c = self.count_up(x, y);
+                        if (1 == (c % 2)) {
+                            let loc = Point::new(x, y);
+                            self.insert_green_fill_tile(&loc);
+                            continue;
+                        }
+                        let c = self.count_down(x, y);
+                        if (1 == (c % 2)) {
+                            let loc = Point::new(x, y);
+                            self.insert_green_fill_tile(&loc);
+                            continue;
+                        }
+                    }
+                    _ => {}
+                }
+            }
         }
+        self.fill_if_neighbors();
     }
 
     fn get_color(&self, x: u64, y: u64) -> TileColor {
@@ -223,12 +437,73 @@ impl TileGrid {
                     TileColor::Green => {
                         disp_row.push("X".to_string());
                     }
+                    TileColor::GreenFill => {
+                        disp_row.push("@".to_string());
+                    }
                     TileColor::Other => {
                         disp_row.push(".".to_string());
                     }
                 }
             }
             println!("{}", disp_row.join(""));
+        }
+    }
+
+    fn is_filled(&self, a: &Point, b: &Point) -> bool {
+        let mut ul: Point = Point::new(0, 0);
+        let mut br: Point = Point::new(0, 0);
+        if a.x < b.x && a.y < b.y {
+            (ul.x, ul.y) = (a.x, a.y);
+            (br.x, br.y) = (b.x, b.y);
+        } else if a.x < b.x && a.y > b.y {
+            (ul.x, ul.y) = (a.x, b.y);
+            (br.x, br.y) = (b.x, a.y);
+        } else if a.x > b.x && a.y < b.y {
+            (ul.x, ul.y) = (b.x, a.y);
+            (br.x, br.y) = (a.x, b.y);
+        } else if a.x > b.x && a.y > b.y {
+            (ul.x, ul.y) = (b.x, b.y);
+            (br.x, br.y) = (a.x, a.y);
+        }
+        let x_s = ul.x + 1;
+        let x_e = br.x;
+        let y_s = ul.y + 1;
+        let y_e = br.y;
+        for x in x_s..x_e {
+            for y in y_s..y_e {
+                match self.get_color(x, y) {
+                    TileColor::GreenFill => {}
+                    _ => {
+                        return false;
+                    }
+                }
+            }
+        }
+        true
+    }
+
+    fn find_max_filled_area(
+        &self,
+        max_area: &mut u64,
+        points: &Vec<Point>,
+        rng: Range<usize>,
+    ) {
+        let id_a: usize = rng.start;
+        let end: usize = rng.end;
+        if 1 >= (end - id_a) {
+            return;
+        }
+        let start = id_a + 1;
+        self.find_max_filled_area(max_area, points, start..end);
+        let point_a = points.get(id_a).unwrap();
+        for id_b in start..end {
+            let point_b = points.get(id_b).unwrap();
+            if self.is_filled(point_a, point_b) {
+                let area = point_a.area_with(point_b);
+                if area > *max_area {
+                    *max_area = area
+                }
+            }
         }
     }
 }
@@ -324,17 +599,53 @@ fn main() -> Result<()> {
     let args = Cli::parse();
     let mut upto: usize = 10;
     let path = &args.path;
+    let consider_green_tiles = &args.with_green_tiles;
 
     let f = File::open(path).with_context(|| {
         format!("Could not open `{}`", path.display())
     })?;
     let points = file_to_points(f);
 
-    let mut max_area: u64 = 0;
-    let len = points.len();
-    find_max_area(&mut max_area, &points, 0..len);
+    if !*consider_green_tiles {
+        let mut max_area: u64 = 0;
+        let len = points.len();
+        find_max_area(&mut max_area, &points, 0..len);
 
-    println!("Max area: {}", max_area);
+        println!("Max area: {}", max_area);
+    } else {
+        let mut grid = TileGrid::new();
+
+        let len = points.len();
+        for i in 0..len {
+            let p: &Point = points.get(i).unwrap();
+            grid.insert_red_tile(points.get(i).unwrap());
+        }
+
+        let mut a = 0;
+        for next in 1..=len {
+            let mut b = next;
+            if next == len {
+                b = 0;
+            }
+            grid.connect_red_tiles_with_green_tiles(
+                points.get(a).unwrap(),
+                points.get(b).unwrap(),
+            );
+            a = b;
+        }
+        // println!("\nOUTLINED:");
+        // grid.display_grid();
+
+        grid.fill_in_loops();
+        // println!("\nFILLED:");
+        // grid.display_grid();
+
+        let mut max_area: u64 = 0;
+        let len = points.len();
+        grid.find_max_filled_area(&mut max_area, &points, 0..len);
+
+        println!("Max area: {}", max_area);
+    }
 
     Ok(())
 }
@@ -428,6 +739,7 @@ fn t_given_example_part2() {
         println!("About to insert ({},{})", p.x, p.y);
         grid.insert_red_tile(points.get(i).unwrap());
     }
+
     let mut a = 0;
     for next in 1..=len {
         let mut b = next;
@@ -440,8 +752,70 @@ fn t_given_example_part2() {
         );
         a = b;
     }
-
+    println!("\nOUTLINED:");
     grid.display_grid();
 
-    assert_eq!(0, 2);
+    grid.fill_in_loops();
+    println!("\nFILLED:");
+    grid.display_grid();
+
+    let mut max_area: u64 = 0;
+    let len = points.len();
+    grid.find_max_filled_area(&mut max_area, &points, 0..len);
+
+    assert_eq!(24, max_area);
+}
+
+#[test]
+fn t_degen_example_part_2() {
+    let raw_input = "3,1
+6,1
+6,3
+11,3
+11,1
+15,1
+15,5
+9,5
+9,6
+6,6
+6,8
+1,8
+1,5
+3,5"
+    .to_string();
+    let points = string_to_points(raw_input);
+
+    let mut grid = TileGrid::new();
+
+    let len = points.len();
+    for i in 0..len {
+        let p: &Point = points.get(i).unwrap();
+        println!("About to insert ({},{})", p.x, p.y);
+        grid.insert_red_tile(points.get(i).unwrap());
+    }
+
+    let mut a = 0;
+    for next in 1..=len {
+        let mut b = next;
+        if next == len {
+            b = 0;
+        }
+        grid.connect_red_tiles_with_green_tiles(
+            points.get(a).unwrap(),
+            points.get(b).unwrap(),
+        );
+        a = b;
+    }
+    println!("\nOUTLINED:");
+    grid.display_grid();
+
+    grid.fill_in_loops();
+    println!("\nFILLED:");
+    grid.display_grid();
+
+    let mut max_area: u64 = 0;
+    let len = points.len();
+    grid.find_max_filled_area(&mut max_area, &points, 0..len);
+
+    assert_eq!(32, max_area);
 }
