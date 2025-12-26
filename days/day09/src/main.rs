@@ -4,6 +4,7 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::ops::Range;
 use std::path::PathBuf;
+use std::time::Instant;
 
 use anyhow::{Context, Result};
 use clap::{Id, Parser};
@@ -604,23 +605,40 @@ fn main() -> Result<()> {
     let f = File::open(path).with_context(|| {
         format!("Could not open `{}`", path.display())
     })?;
+
+    let now = Instant::now();
     let points = file_to_points(f);
+    println!(
+        "file_to_points() took {} secs",
+        now.elapsed().as_secs_f64()
+    );
 
     if !*consider_green_tiles {
         let mut max_area: u64 = 0;
         let len = points.len();
+        let now = Instant::now();
         find_max_area(&mut max_area, &points, 0..len);
+        println!(
+            "find_max_area() took {} secs",
+            now.elapsed().as_secs_f64()
+        );
 
         println!("Max area: {}", max_area);
     } else {
         let mut grid = TileGrid::new();
 
+        let now = Instant::now();
         let len = points.len();
         for i in 0..len {
             let p: &Point = points.get(i).unwrap();
             grid.insert_red_tile(points.get(i).unwrap());
         }
+        println!(
+            "inserting red tiles took {} secs",
+            now.elapsed().as_secs_f64()
+        );
 
+        let now = Instant::now();
         let mut a = 0;
         for next in 1..=len {
             let mut b = next;
@@ -633,16 +651,30 @@ fn main() -> Result<()> {
             );
             a = b;
         }
+        println!(
+            "connecting red tiles took {} secs",
+            now.elapsed().as_secs_f64()
+        );
         // println!("\nOUTLINED:");
         // grid.display_grid();
 
+        let now = Instant::now();
         grid.fill_in_loops();
         // println!("\nFILLED:");
         // grid.display_grid();
+        println!(
+            "filling loops took {} secs",
+            now.elapsed().as_secs_f64()
+        );
 
+        let now = Instant::now();
         let mut max_area: u64 = 0;
         let len = points.len();
         grid.find_max_filled_area(&mut max_area, &points, 0..len);
+        println!(
+            "find_max_filled_area() took {} secs",
+            now.elapsed().as_secs_f64()
+        );
 
         println!("Max area: {}", max_area);
     }

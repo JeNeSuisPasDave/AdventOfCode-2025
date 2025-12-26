@@ -397,3 +397,9 @@ got grid display working. Found bugs in tile insertion and connecting algorithm.
 Part 2 is working now for the example, and also example-degen. But it is incredibly inefficient and cannot solve the input data in a reasonable amount of time (I waited almost 5 minutes with no solution in sight).
 
 Obviously I need to do a more clever fill algorithm.
+
+*Friday, 2025-12-26*
+
+**09:07**
+
+Added some elapsed time messages to see where the bottleneck is. Right now it seems to be in the flood fill algorithm, which is not surprising.
