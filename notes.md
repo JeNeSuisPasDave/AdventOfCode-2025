@@ -403,3 +403,11 @@ Obviously I need to do a more clever fill algorithm.
 **09:07**
 
 Added some elapsed time messages to see where the bottleneck is. Right now it seems to be in the flood fill algorithm, which is not surprising.
+
+*Sunday, 2025-12-28*
+
+**15:45**
+
+Still working out an efficient method for determing inside versus outside of the loop. Right now I'm determining the inside direction relative to each red tile. If I can do that correctly, then I just look at each area to make sure the corner tiles are pointing inside the area and thatn there are no green-crossings within the area.  This should be much faster than the "loop fill" method I was using originally.
+
+I'm having to draw out the various combinations of tiles to guide my 'inside direction' detection algorithm creation, so still a work in progress.

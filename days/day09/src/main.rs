@@ -1,5 +1,4 @@
-use ::std::cmp::Ordering;
-use ::std::collections::{BTreeMap, BTreeSet};
+use ::std::collections::BTreeMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::ops::Range;
@@ -7,7 +6,7 @@ use std::path::PathBuf;
 use std::time::Instant;
 
 use anyhow::{Context, Result};
-use clap::{Id, Parser};
+use clap::Parser;
 use regex::Regex;
 
 /// Given input file containing the coordinates of red tiles,
@@ -75,10 +74,33 @@ enum TileColor {
     Other,
 }
 
+#[derive(Debug, Clone, Copy)]
+enum InsideIs {
+    // red tile inside direction
+    //
+    UpperRight,
+    UpperLeft,
+    LowerLeft,
+    LowerRight,
+    NotUpperRight,
+    NotUpperLeft,
+    NotLowerLeft,
+    NotLowerRight,
+
+    // green tile indisde direction
+    //
+    Above,
+    Left,
+    Below,
+    Right,
+    Unknown,
+}
+
 #[derive(Debug)]
 struct Tile {
     loc: Point,
     color: TileColor,
+    inside_direction: InsideIs,
 }
 
 impl Tile {
@@ -86,6 +108,16 @@ impl Tile {
         Tile {
             loc: loc,
             color: color,
+            inside_direction: InsideIs::Unknown,
+        }
+    }
+
+    fn set_inside_direction(&mut self, inside_direction: InsideIs) {
+        match self.inside_direction {
+            InsideIs::Unknown => {
+                self.inside_direction = inside_direction;
+            }
+            _ => {}
         }
     }
 }
@@ -152,6 +184,110 @@ impl TileGrid {
         let row = self.tiles.get(&loc.x).unwrap();
         if !row.contains_key(&loc.y) {
             panic!("missing y")
+        }
+    }
+
+    fn mark_red_tiles_with_inside_direction(
+        &mut self,
+        a: &Point,
+        b: &Point,
+    ) {
+        let mut a_inside_dir = self.get_inside_direction(a.x, a.y);
+        let b_inside_dir = self.get_inside_direction(b.x, b.y);
+        match a_inside_dir {
+            InsideIs::Unknown => {
+                let dir = self.find_inside_direction(a.x, a.y);
+                self.set_inside_direction(a.x, a.y, dir);
+                a_inside_dir = self.get_inside_direction(a.x, a.y);
+            }
+            _ => {}
+        }
+        match b_inside_dir {
+            InsideIs::Unknown => {
+                if a.x == b.x {
+                    // moving down or up
+                    //
+                    let x = a.x;
+                    if a.y < b.y {
+                        // moving down
+                        //
+                        match a_inside_dir {
+                            InsideIs::NotLowerLeft
+                            | InsideIs::LowerRight => {
+                                // inside on the right
+                                //
+                                match self.get_color(x + 1, b.y) {
+                                    TileColor::Other => {
+                                        self.set_inside_direction(
+                                            b.x,
+                                            b.y,
+                                            InsideIs::NotUpperLeft,
+                                        );
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            InsideIs::NotLowerRight
+                            | InsideIs::LowerLeft => {
+                                // inside on the left
+                                //
+                                match self.get_color(x - 1, b.y) {
+                                    TileColor::Other => {
+                                        self.set_inside_direction(
+                                            b.x,
+                                            b.y,
+                                            InsideIs::NotUpperRight,
+                                        );
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            _ => {
+                                panic!("Unexpected a_inside_dir")
+                            }
+                        }
+                    } else {
+                        // moving up
+                        //
+                        match a_inside_dir {
+                            InsideIs::NotUpperLeft
+                            | InsideIs::UpperRight => {
+                                // inside on the right
+                                //
+                                match self.get_color(x + 1, b.y) {
+                                    TileColor::Other => {
+                                        self.set_inside_direction(
+                                            b.x,
+                                            b.y,
+                                            InsideIs::NotLowerLeft,
+                                        );
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            InsideIs::NotUpperRight
+                            | InsideIs::UpperLeft => {
+                                // inside on the left
+                                //
+                                match self.get_color(x - 1, b.y) {
+                                    TileColor::Other => {
+                                        self.set_inside_direction(
+                                            b.x,
+                                            b.y,
+                                            InsideIs::NotLowerRight,
+                                        );
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            _ => {
+                                panic!("Unexpected a_inside_dir")
+                            }
+                        }
+                    }
+                }
+            }
+            _ => {}
         }
     }
 
@@ -366,41 +502,41 @@ impl TileGrid {
                 match self.get_color(x, y) {
                     TileColor::Other => {
                         let c = self.count_left(x, y);
-                        if (0 == c) {
+                        if 0 == c {
                             continue;
                         }
                         let c = self.count_right(x, y);
-                        if (0 == c) {
+                        if 0 == c {
                             continue;
                         }
                         let c = self.count_up(x, y);
-                        if (0 == c) {
+                        if 0 == c {
                             continue;
                         }
                         let c = self.count_down(x, y);
-                        if (0 == c) {
+                        if 0 == c {
                             continue;
                         }
                         let c = self.count_left(x, y);
-                        if (1 == (c % 2)) {
+                        if 1 == (c % 2) {
                             let loc = Point::new(x, y);
                             self.insert_green_fill_tile(&loc);
                             continue;
                         }
                         let c = self.count_right(x, y);
-                        if (1 == (c % 2)) {
+                        if 1 == (c % 2) {
                             let loc = Point::new(x, y);
                             self.insert_green_fill_tile(&loc);
                             continue;
                         }
                         let c = self.count_up(x, y);
-                        if (1 == (c % 2)) {
+                        if 1 == (c % 2) {
                             let loc = Point::new(x, y);
                             self.insert_green_fill_tile(&loc);
                             continue;
                         }
                         let c = self.count_down(x, y);
-                        if (1 == (c % 2)) {
+                        if 1 == (c % 2) {
                             let loc = Point::new(x, y);
                             self.insert_green_fill_tile(&loc);
                             continue;
@@ -411,6 +547,112 @@ impl TileGrid {
             }
         }
         self.fill_if_neighbors();
+    }
+
+    fn is_outside(&self, x: u64, y: u64) -> bool {
+        match self.get_color(x, y) {
+            TileColor::Other => {
+                let c = self.count_left(x, y);
+                if 0 == c {
+                    return true;
+                }
+                let c = self.count_right(x, y);
+                if 0 == c {
+                    return true;
+                }
+                let c = self.count_up(x, y);
+                if 0 == c {
+                    return true;
+                }
+                let c = self.count_down(x, y);
+                if 0 == c {
+                    return true;
+                }
+                let c = self.count_left(x, y);
+                if 1 == (c % 2) {
+                    return false;
+                }
+                let c = self.count_right(x, y);
+                if 1 == (c % 2) {
+                    return false;
+                }
+                let c = self.count_up(x, y);
+                if 1 == (c % 2) {
+                    return false;
+                }
+                let c = self.count_down(x, y);
+                if 1 == (c % 2) {
+                    return false;
+                }
+                return true;
+            }
+            _ => {
+                return true;
+            }
+        }
+    }
+
+    fn find_inside_direction(&self, x: u64, y: u64) -> InsideIs {
+        // only works for red tiles that are corner tiles
+        //
+        let upper_right_out;
+        let upper_left_out;
+        let lower_left_out;
+        let lower_right_out;
+        if 0 < x {
+            if 0 < y {
+                upper_left_out = self.is_outside(x - 1, y - 1);
+                upper_right_out = self.is_outside(x + 1, y - 1);
+                lower_right_out = self.is_outside(x + 1, y + 1);
+                lower_left_out = self.is_outside(x - 1, y + 1);
+            } else {
+                // y == 0
+                upper_left_out = true;
+                upper_right_out = true;
+                lower_right_out = self.is_outside(x + 1, y + 1);
+                lower_left_out = self.is_outside(x - 1, y + 1);
+            }
+        } else {
+            if 0 < y {
+                // x == 0
+                upper_left_out = true;
+                upper_right_out = self.is_outside(x + 1, y - 1);
+                lower_right_out = self.is_outside(x + 1, y + 1);
+                lower_left_out = true;
+            } else {
+                // x == 0, y == 0
+                upper_left_out = true;
+                upper_right_out = true;
+                lower_right_out = self.is_outside(x + 1, y + 1);
+                lower_left_out = true;
+            }
+        }
+
+        if upper_left_out && lower_left_out && lower_right_out {
+            return InsideIs::UpperRight;
+        }
+        if upper_right_out && lower_left_out && lower_right_out {
+            return InsideIs::UpperLeft;
+        }
+        if upper_right_out && upper_left_out && lower_right_out {
+            return InsideIs::LowerLeft;
+        }
+        if upper_right_out && upper_left_out && lower_left_out {
+            return InsideIs::LowerRight;
+        }
+        if upper_right_out {
+            return InsideIs::NotUpperRight;
+        }
+        if upper_left_out {
+            return InsideIs::NotUpperLeft;
+        }
+        if lower_left_out {
+            return InsideIs::NotLowerLeft;
+        }
+        if lower_right_out {
+            return InsideIs::NotLowerRight;
+        }
+        return InsideIs::Unknown;
     }
 
     fn get_color(&self, x: u64, y: u64) -> TileColor {
@@ -424,6 +666,30 @@ impl TileGrid {
                 row.get(&y).unwrap().color
             }
         }
+    }
+
+    fn get_inside_direction(&self, x: u64, y: u64) -> InsideIs {
+        if !self.tiles.contains_key(&x) {
+            InsideIs::Unknown
+        } else {
+            let row = self.tiles.get(&x).unwrap();
+            if !row.contains_key(&y) {
+                InsideIs::Unknown
+            } else {
+                row.get(&y).unwrap().inside_direction
+            }
+        }
+    }
+
+    fn set_inside_direction(&mut self, x: u64, y: u64, idir: InsideIs) {
+        if !self.tiles.contains_key(&x) {
+            return;
+        }
+        let row = self.tiles.get_mut(&x).unwrap();
+        if !row.contains_key(&y) {
+            return;
+        }
+        row.get_mut(&y).unwrap().set_inside_direction(idir);
     }
 
     fn display_grid(&self) {
