@@ -214,36 +214,26 @@ impl TileGrid {
                         match a_inside_dir {
                             InsideIs::NotLowerLeft
                             | InsideIs::LowerRight => {
-                                // inside on the right
-                                //
-                                match self.get_color(x + 1, b.y) {
-                                    TileColor::Other => {
-                                        self.set_inside_direction(
-                                            b.x,
-                                            b.y,
-                                            InsideIs::NotUpperLeft,
-                                        );
-                                    }
-                                    _ => {}
-                                }
-                            }
-                            InsideIs::NotLowerRight
-                            | InsideIs::LowerLeft => {
-                                // inside on the left
-                                //
-                                match self.get_color(x - 1, b.y) {
-                                    TileColor::Other => {
-                                        self.set_inside_direction(
-                                            b.x,
-                                            b.y,
-                                            InsideIs::NotUpperRight,
-                                        );
-                                    }
-                                    _ => {}
+                                if self.is_color_other(x + 1, b.y) {
+                                    self.set_inside_direction(
+                                        b.x,
+                                        b.y,
+                                        InsideIs::NotUpperLeft,
+                                    );
+                                } else if self
+                                    .is_color_other(x - 1, b.y)
+                                {
+                                    self.set_inside_direction(
+                                        b.x,
+                                        b.y,
+                                        InsideIs::UpperRight,
+                                    );
+                                } else {
+                                    panic!("Unmatched AAA");
                                 }
                             }
                             _ => {
-                                panic!("Unexpected a_inside_dir")
+                                panic!("Unexpected a_inside_dir AAA")
                             }
                         }
                     } else {
@@ -252,39 +242,40 @@ impl TileGrid {
                         match a_inside_dir {
                             InsideIs::NotUpperLeft
                             | InsideIs::UpperRight => {
-                                // inside on the right
-                                //
-                                match self.get_color(x + 1, b.y) {
-                                    TileColor::Other => {
-                                        self.set_inside_direction(
-                                            b.x,
-                                            b.y,
-                                            InsideIs::NotLowerLeft,
-                                        );
-                                    }
-                                    _ => {}
-                                }
-                            }
-                            InsideIs::NotUpperRight
-                            | InsideIs::UpperLeft => {
-                                // inside on the left
-                                //
-                                match self.get_color(x - 1, b.y) {
-                                    TileColor::Other => {
-                                        self.set_inside_direction(
-                                            b.x,
-                                            b.y,
-                                            InsideIs::NotLowerRight,
-                                        );
-                                    }
-                                    _ => {}
+                                if self.is_color_other(x + 1, b.y) {
+                                    self.set_inside_direction(
+                                        b.x,
+                                        b.y,
+                                        InsideIs::NotLowerLeft,
+                                    );
+                                } else if self
+                                    .is_color_other(x - 1, b.y)
+                                {
+                                    self.set_inside_direction(
+                                        b.x,
+                                        b.y,
+                                        InsideIs::LowerRight,
+                                    );
+                                } else {
+                                    panic!("Unmatched BBB");
                                 }
                             }
                             _ => {
-                                panic!("Unexpected a_inside_dir")
+                                panic!("Unexpected a_inside_dir BBB")
                             }
                         }
                     }
+                } else if a.y == b.y {
+                    // moving left or right
+                    //
+                    let y = a.y;
+                    if a.x < b.x {
+                        // moving right
+                        //
+                        match a_inside_dir {}
+                    }
+                } else {
+                    panic!("Diagonal connection of red tiles ZZZ");
                 }
             }
             _ => {}
@@ -449,9 +440,30 @@ impl TileGrid {
         count
     }
 
-    fn is_green_fill(&self, x: u64, y: u64) -> bool {
+    fn is_color_green(&self, x: u64, y: u64) -> bool {
+        match self.get_color(x, y) {
+            TileColor::Green => true,
+            _ => false,
+        }
+    }
+
+    fn is_color_green_fill(&self, x: u64, y: u64) -> bool {
         match self.get_color(x, y) {
             TileColor::GreenFill => true,
+            _ => false,
+        }
+    }
+
+    fn is_color_other(&self, x: u64, y: u64) -> bool {
+        match self.get_color(x, y) {
+            TileColor::Other => true,
+            _ => false,
+        }
+    }
+
+    fn is_color_red(&self, x: u64, y: u64) -> bool {
+        match self.get_color(x, y) {
+            TileColor::Red => true,
             _ => false,
         }
     }
@@ -462,28 +474,28 @@ impl TileGrid {
                 match self.get_color(x, y) {
                     TileColor::Other => {
                         if (self.min_x < x)
-                            && (self.is_green_fill(x - 1, y))
+                            && (self.is_color_green_fill(x - 1, y))
                         {
                             let loc = Point::new(x, y);
                             self.insert_green_fill_tile(&loc);
                             continue;
                         }
                         if (self.max_x > x)
-                            && (self.is_green_fill(x + 1, y))
+                            && (self.is_color_green_fill(x + 1, y))
                         {
                             let loc = Point::new(x, y);
                             self.insert_green_fill_tile(&loc);
                             continue;
                         }
                         if (self.min_y < y)
-                            && (self.is_green_fill(x, y - 1))
+                            && (self.is_color_green_fill(x, y - 1))
                         {
                             let loc = Point::new(x, y);
                             self.insert_green_fill_tile(&loc);
                             continue;
                         }
                         if (self.max_y > y)
-                            && (self.is_green_fill(x, y + 1))
+                            && (self.is_color_green_fill(x, y + 1))
                         {
                             let loc = Point::new(x, y);
                             self.insert_green_fill_tile(&loc);

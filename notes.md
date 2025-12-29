@@ -411,3 +411,31 @@ Added some elapsed time messages to see where the bottleneck is. Right now it se
 Still working out an efficient method for determing inside versus outside of the loop. Right now I'm determining the inside direction relative to each red tile. If I can do that correctly, then I just look at each area to make sure the corner tiles are pointing inside the area and thatn there are no green-crossings within the area.  This should be much faster than the "loop fill" method I was using originally.
 
 I'm having to draw out the various combinations of tiles to guide my 'inside direction' detection algorithm creation, so still a work in progress.
+
+*Monday, 2025-12-29*
+
+**09:04**
+
+Captured performance on two examples:
+
+     Running `target/debug/day09 --consider-green-tiles example.txt`
+file_to_points() took 0.003567334 secs
+inserting red tiles took 0.000017584 secs
+connecting red tiles took 0.000012875 secs
+filling loops took 0.000174083 secs
+find_max_filled_area() took 0.000017791 secs
+Max area: 24
+
+     Running `target/debug/day09 --consider-green-tiles example-degen.txt`
+file_to_points() took 0.002836375 secs
+inserting red tiles took 0.000020542 secs
+connecting red tiles took 0.000022833 secs
+filling loops took 0.0006175 secs
+find_max_filled_area() took 0.0001265 secs
+Max area: 32
+
+    Running `target/debug/day09 --consider-green-tiles day09-input.txt`
+file_to_points() took 0.00531775 secs
+inserting red tiles took 0.001163209 secs
+connecting red tiles took 0.968863125 secs
+^C
