@@ -64,6 +64,10 @@ impl Point {
             }
         }
     }
+
+    fn display(&self) -> String {
+        format!("({},{})", self.x, self.y)
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -187,6 +191,337 @@ impl TileGrid {
         }
     }
 
+    fn mark_red_tiles_moving_down(
+        &mut self,
+        a_inside_dir: &InsideIs,
+        a: &Point,
+        b: &Point,
+    ) {
+        let x = a.x;
+        match a_inside_dir {
+            InsideIs::NotLowerLeft => {
+                if self.is_color_other(x + 1, b.y) {
+                    self.set_inside_direction(
+                        b.x,
+                        b.y,
+                        InsideIs::NotUpperLeft,
+                    );
+                } else if self.is_color_other(x - 1, b.y) {
+                    self.set_inside_direction(
+                        b.x,
+                        b.y,
+                        InsideIs::UpperRight,
+                    );
+                } else {
+                    panic!("DOWN 1");
+                }
+            }
+            InsideIs::LowerLeft => {
+                if self.is_color_other(x + 1, b.y) {
+                    self.set_inside_direction(
+                        b.x,
+                        b.y,
+                        InsideIs::UpperLeft,
+                    );
+                } else if self.is_color_other(x - 1, b.y) {
+                    self.set_inside_direction(
+                        b.x,
+                        b.y,
+                        InsideIs::NotUpperRight,
+                    );
+                } else {
+                    panic!("DOWN 2");
+                }
+            }
+            InsideIs::NotLowerRight => {
+                if self.is_color_other(x + 1, b.y) {
+                    self.set_inside_direction(
+                        b.x,
+                        b.y,
+                        InsideIs::UpperLeft,
+                    );
+                } else if self.is_color_other(x - 1, b.y) {
+                    self.set_inside_direction(
+                        b.x,
+                        b.y,
+                        InsideIs::NotUpperRight,
+                    );
+                } else {
+                    panic!("DOWN 3");
+                }
+            }
+            InsideIs::LowerRight => {
+                if self.is_color_other(x + 1, b.y) {
+                    self.set_inside_direction(
+                        b.x,
+                        b.y,
+                        InsideIs::NotUpperLeft,
+                    );
+                } else if self.is_color_other(x - 1, b.y) {
+                    self.set_inside_direction(
+                        b.x,
+                        b.y,
+                        InsideIs::UpperRight,
+                    );
+                } else {
+                    panic!("DOWN 4");
+                }
+            }
+            _ => {
+                panic!(
+                    "Unexpected DOWN a_inside_dir: {:?}",
+                    a_inside_dir
+                );
+            }
+        }
+    }
+
+    fn mark_red_tiles_moving_up(
+        &mut self,
+        a_inside_dir: &InsideIs,
+        a: &Point,
+        b: &Point,
+    ) {
+        let x = a.x;
+        match a_inside_dir {
+            InsideIs::NotUpperLeft => {
+                if self.is_color_other(x + 1, b.y) {
+                    self.set_inside_direction(
+                        b.x,
+                        b.y,
+                        InsideIs::NotLowerLeft,
+                    );
+                } else if self.is_color_other(x - 1, b.y) {
+                    self.set_inside_direction(
+                        b.x,
+                        b.y,
+                        InsideIs::LowerRight,
+                    );
+                } else {
+                    panic!("UP 1");
+                }
+            }
+            InsideIs::UpperLeft => {
+                if self.is_color_other(x + 1, b.y) {
+                    self.set_inside_direction(
+                        b.x,
+                        b.y,
+                        InsideIs::LowerLeft,
+                    );
+                } else if self.is_color_other(x - 1, b.y) {
+                    self.set_inside_direction(
+                        b.x,
+                        b.y,
+                        InsideIs::NotLowerRight,
+                    );
+                } else {
+                    panic!("UP 2");
+                }
+            }
+            InsideIs::UpperRight => {
+                if self.is_color_other(x + 1, b.y) {
+                    self.set_inside_direction(
+                        b.x,
+                        b.y,
+                        InsideIs::NotLowerLeft,
+                    );
+                } else if self.is_color_other(x - 1, b.y) {
+                    self.set_inside_direction(
+                        b.x,
+                        b.y,
+                        InsideIs::LowerRight,
+                    );
+                } else {
+                    panic!("UP 3");
+                }
+            }
+            InsideIs::NotUpperRight => {
+                if self.is_color_other(x + 1, b.y) {
+                    self.set_inside_direction(
+                        b.x,
+                        b.y,
+                        InsideIs::LowerLeft,
+                    );
+                } else if self.is_color_other(x - 1, b.y) {
+                    self.set_inside_direction(
+                        b.x,
+                        b.y,
+                        InsideIs::NotLowerRight,
+                    );
+                } else {
+                    panic!("UP 4");
+                }
+            }
+            _ => {
+                panic!("Unexpected UP a_inside_dir");
+            }
+        }
+    }
+
+    fn mark_red_tiles_moving_right(
+        &mut self,
+        a_inside_dir: &InsideIs,
+        a: &Point,
+        b: &Point,
+    ) {
+        let y = a.y;
+        match a_inside_dir {
+            InsideIs::NotLowerRight => {
+                if self.is_color_other(b.x, y - 1) {
+                    self.set_inside_direction(
+                        b.x,
+                        b.y,
+                        InsideIs::NotLowerLeft,
+                    );
+                } else if self.is_color_other(b.x, y + 1) {
+                    self.set_inside_direction(
+                        b.x,
+                        b.y,
+                        InsideIs::UpperLeft,
+                    );
+                } else {
+                    panic!("RIGHT 1");
+                }
+            }
+            InsideIs::LowerRight => {
+                if self.is_color_other(b.x, y - 1) {
+                    self.set_inside_direction(
+                        b.x,
+                        b.y,
+                        InsideIs::LowerLeft,
+                    );
+                } else if self.is_color_other(b.x, y + 1) {
+                    self.set_inside_direction(
+                        b.x,
+                        b.y,
+                        InsideIs::NotUpperLeft,
+                    );
+                } else {
+                    panic!("RIGHT 2");
+                }
+            }
+            InsideIs::NotUpperRight => {
+                if self.is_color_other(b.x, y - 1) {
+                    self.set_inside_direction(
+                        b.x,
+                        b.y,
+                        InsideIs::LowerLeft,
+                    );
+                } else if self.is_color_other(b.x, y + 1) {
+                    self.set_inside_direction(
+                        b.x,
+                        b.y,
+                        InsideIs::NotUpperLeft,
+                    );
+                } else {
+                    panic!("RIGHT 3");
+                }
+            }
+            InsideIs::UpperRight => {
+                if self.is_color_other(b.x, y - 1) {
+                    self.set_inside_direction(
+                        b.x,
+                        b.y,
+                        InsideIs::NotLowerLeft,
+                    );
+                } else if self.is_color_other(b.x, y + 1) {
+                    self.set_inside_direction(
+                        b.x,
+                        b.y,
+                        InsideIs::UpperLeft,
+                    );
+                } else {
+                    panic!("RIGHT 4");
+                }
+            }
+            _ => {
+                panic!("Unexpected RIGHT a_inside_dir");
+            }
+        }
+    }
+
+    fn mark_red_tiles_moving_left(
+        &mut self,
+        a_inside_dir: &InsideIs,
+        a: &Point,
+        b: &Point,
+    ) {
+        let y = a.y;
+        match a_inside_dir {
+            InsideIs::NotLowerLeft => {
+                if self.is_color_other(b.x, y - 1) {
+                    self.set_inside_direction(
+                        b.x,
+                        b.y,
+                        InsideIs::NotLowerRight,
+                    );
+                } else if self.is_color_other(b.x, y + 1) {
+                    self.set_inside_direction(
+                        b.x,
+                        b.y,
+                        InsideIs::UpperRight,
+                    );
+                } else {
+                    panic!("LEFT 1");
+                }
+            }
+            InsideIs::UpperLeft => {
+                if self.is_color_other(b.x, y - 1) {
+                    self.set_inside_direction(
+                        b.x,
+                        b.y,
+                        InsideIs::NotLowerRight,
+                    );
+                } else if self.is_color_other(b.x, y + 1) {
+                    self.set_inside_direction(
+                        b.x,
+                        b.y,
+                        InsideIs::UpperRight,
+                    );
+                } else {
+                    panic!("LEFT 2");
+                }
+            }
+            InsideIs::NotUpperLeft => {
+                if self.is_color_other(b.x, y - 1) {
+                    self.set_inside_direction(
+                        b.x,
+                        b.y,
+                        InsideIs::LowerRight,
+                    );
+                } else if self.is_color_other(b.x, y + 1) {
+                    self.set_inside_direction(
+                        b.x,
+                        b.y,
+                        InsideIs::NotUpperRight,
+                    );
+                } else {
+                    panic!("LEFT 3");
+                }
+            }
+            InsideIs::LowerLeft => {
+                if self.is_color_other(b.x, y - 1) {
+                    self.set_inside_direction(
+                        b.x,
+                        b.y,
+                        InsideIs::LowerRight,
+                    );
+                } else if self.is_color_other(b.x, y + 1) {
+                    self.set_inside_direction(
+                        b.x,
+                        b.y,
+                        InsideIs::NotUpperRight,
+                    );
+                } else {
+                    panic!("LEFT 4");
+                }
+            }
+            _ => {
+                panic!("Unexpected LEFT a_inside_dir");
+            }
+        }
+    }
+
     fn mark_red_tiles_with_inside_direction(
         &mut self,
         a: &Point,
@@ -207,63 +542,22 @@ impl TileGrid {
                 if a.x == b.x {
                     // moving down or up
                     //
-                    let x = a.x;
                     if a.y < b.y {
                         // moving down
                         //
-                        match a_inside_dir {
-                            InsideIs::NotLowerLeft
-                            | InsideIs::LowerRight => {
-                                if self.is_color_other(x + 1, b.y) {
-                                    self.set_inside_direction(
-                                        b.x,
-                                        b.y,
-                                        InsideIs::NotUpperLeft,
-                                    );
-                                } else if self
-                                    .is_color_other(x - 1, b.y)
-                                {
-                                    self.set_inside_direction(
-                                        b.x,
-                                        b.y,
-                                        InsideIs::UpperRight,
-                                    );
-                                } else {
-                                    panic!("Unmatched AAA");
-                                }
-                            }
-                            _ => {
-                                panic!("Unexpected a_inside_dir AAA")
-                            }
-                        }
+                        self.mark_red_tiles_moving_down(
+                            &a_inside_dir,
+                            a,
+                            b,
+                        );
                     } else {
                         // moving up
                         //
-                        match a_inside_dir {
-                            InsideIs::NotUpperLeft
-                            | InsideIs::UpperRight => {
-                                if self.is_color_other(x + 1, b.y) {
-                                    self.set_inside_direction(
-                                        b.x,
-                                        b.y,
-                                        InsideIs::NotLowerLeft,
-                                    );
-                                } else if self
-                                    .is_color_other(x - 1, b.y)
-                                {
-                                    self.set_inside_direction(
-                                        b.x,
-                                        b.y,
-                                        InsideIs::LowerRight,
-                                    );
-                                } else {
-                                    panic!("Unmatched BBB");
-                                }
-                            }
-                            _ => {
-                                panic!("Unexpected a_inside_dir BBB")
-                            }
-                        }
+                        self.mark_red_tiles_moving_up(
+                            &a_inside_dir,
+                            a,
+                            b,
+                        );
                     }
                 } else if a.y == b.y {
                     // moving left or right
@@ -272,7 +566,19 @@ impl TileGrid {
                     if a.x < b.x {
                         // moving right
                         //
-                        match a_inside_dir {}
+                        self.mark_red_tiles_moving_right(
+                            &a_inside_dir,
+                            a,
+                            b,
+                        );
+                    } else {
+                        // moving left
+                        //
+                        self.mark_red_tiles_moving_left(
+                            &a_inside_dir,
+                            a,
+                            b,
+                        );
                     }
                 } else {
                     panic!("Diagonal connection of red tiles ZZZ");
@@ -923,6 +1229,11 @@ fn main() -> Result<()> {
             if next == len {
                 b = 0;
             }
+            // println!(
+            //     "connecting {} --> {}",
+            //     points.get(a).unwrap().display(),
+            //     points.get(b).unwrap().display()
+            // );
             grid.connect_red_tiles_with_green_tiles(
                 points.get(a).unwrap(),
                 points.get(b).unwrap(),
@@ -933,8 +1244,41 @@ fn main() -> Result<()> {
             "connecting red tiles took {} secs",
             now.elapsed().as_secs_f64()
         );
-        // println!("\nOUTLINED:");
-        // grid.display_grid();
+        println!("\nOUTLINED:");
+        if grid.max_x < 50 && grid.max_y < 50 {
+            grid.display_grid();
+        }
+
+        let now = Instant::now();
+        let mut a = 0;
+        for next in 1..=len {
+            let mut b = next;
+            if next == len {
+                b = 0;
+            }
+            let p_a = points.get(a).unwrap();
+            let p_b = points.get(b).unwrap();
+            // println!(
+            //     "marking {} ({:?})--> {}",
+            //     points.get(a).unwrap().display(),
+            //     grid.get_inside_direction(p_a.x, p_a.y),
+            //     points.get(b).unwrap().display()
+            // );
+            grid.mark_red_tiles_with_inside_direction(
+                points.get(a).unwrap(),
+                points.get(b).unwrap(),
+            );
+            // println!(
+            //     "a is now {:?}; b is now {:?}",
+            //     grid.get_inside_direction(p_a.x, p_a.y),
+            //     grid.get_inside_direction(p_b.x, p_b.y)
+            // );
+            a = b;
+        }
+        println!(
+            "marking inside orientation of red tiles took {} secs",
+            now.elapsed().as_secs_f64()
+        );
 
         let now = Instant::now();
         grid.fill_in_loops();
@@ -1065,6 +1409,20 @@ fn t_given_example_part2() {
     println!("\nOUTLINED:");
     grid.display_grid();
 
+    let mut a = 0;
+    for next in 1..=len {
+        let mut b = next;
+        if next == len {
+            b = 0;
+        }
+        grid.mark_red_tiles_with_inside_direction(
+            points.get(a).unwrap(),
+            points.get(b).unwrap(),
+        );
+        a = b;
+    }
+    println!("\nMARKED:");
+
     grid.fill_in_loops();
     println!("\nFILLED:");
     grid.display_grid();
@@ -1118,6 +1476,20 @@ fn t_degen_example_part_2() {
     }
     println!("\nOUTLINED:");
     grid.display_grid();
+
+    let mut a = 0;
+    for next in 1..=len {
+        let mut b = next;
+        if next == len {
+            b = 0;
+        }
+        grid.mark_red_tiles_with_inside_direction(
+            points.get(a).unwrap(),
+            points.get(b).unwrap(),
+        );
+        a = b;
+    }
+    println!("\nMARKED:");
 
     grid.fill_in_loops();
     println!("\nFILLED:");

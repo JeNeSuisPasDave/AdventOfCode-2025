@@ -1,15 +1,11 @@
+// DOWN DOWN DOWN DOWN //
+
 ..@@@@  Moving down,
 ..GGA@  where A is NotLowerLeft and right of B is not Red or Green,
 ....G@  then B becomes NotUpperLeft.
 ....G@
 ..GGB@
 ..@@@@
-
-..AGG   Moving down,  
-..G@@   where A is LowerRight and right of B is not Red or Green,
-..G@.   then B becomes NotUpperLeft
-GGB@.
-@@@@.
 
 .@@@@.  Moving down,
 .GGA@.  where A is NotLowerLeft and left of B is not Red or Green,
@@ -18,11 +14,49 @@ GGB@.
 ...BGG
 ......
 
+......  Moving down,
+..GGA.  where A is LowerLeft and right of B is not Red or Green,
+..@@G.  then B becomes UpperLeft.
+..@@G.
+..GGB.
+......
+
+......  Moving down,
+.GGA..  where A is LowerLeft and left of B is not Red or Green,
+.@@G..  then B becomes NotUpperRight.
+..@G..
+..@BGG
+..@@@@
+
+.@@@@
+.@AGG   Moving down,  
+.@G..   where A is NotLowerRight and right of B is not Red or Green,
+@@G..   then B becomes UpperLeft
+GGB..
+.....
+
+.@@@@
+.@AGG  Moving down,
+.@G..  where A is NotLowerRight and left of B is not Red or Green,
+.@G..  then B becomes NotUpperRight.
+.@BGG
+.@@@@
+
+.....
+..AGG   Moving down,  
+..G@@   where A is LowerRight and right of B is not Red or Green,
+..G@.   then B becomes NotUpperLeft
+GGB@.
+@@@@.
+
+.....
 ..AGG  Moving down,
 ..G@@  where A is LowerRight and left of B is not Red or Green,
 ..G@@  then B becomes UpperRight.
 ..BGG
 .....
+
+// UP UP UP UP //
 
 ..@@@@  Moving up,
 ..GGB@  where A is NotUpperLeft and right of B is not Red or Green,
@@ -31,6 +65,27 @@ GGB@.
 ..GGA@
 ..@@@@
 
+.....
+..BGG   Moving up,  
+..G@@   where A is NotUpperLeft and left of B is not Red or Green,
+..G@.   then B becomes LowerRight.
+GGA@.
+@@@@.
+
+.....
+GGB..   Moving up,  
+@@G..   where A is UpperLeft and right of B is not Red or Green,
+@@G..   then B becomes LowerLeft.
+GGA..
+.....
+
+.@@@@
+.@BGG   Moving up,  
+.@G..   where A is UpperLeft and left of B is not Red or Green,
+@@G..   then B becomes NotLowerRight.
+GGA..
+.....
+
 .@@@@.  Moving up,
 .GGB@.  where A is UpperRight and right of B is not Red or Green,
 ...G@.  then B becomes NotLowerLeft.
@@ -38,17 +93,26 @@ GGB@.
 ...AGG
 ......
 
-..BGG  Moving up,
-..G@@  where A is NotUpperLeft and left of B is not Red or Green,
-..G@.  then B becomes LowerRight.
-GGA@.
-@@@@.
+......  Moving up,
+...BGG  where A is UpperRight and left of B is not Red or Green,
+...G@@  then B becomes LowerRight.
+...G@@
+...AGG
+......
 
-..BGG  Moving up,
-..G@@  where A is UpperRight and left of B is not Red or Green,
-..G@@  then B becomes LowerRight.
-..AGG
-.....
+......  Moving up,
+.GGB..  where A is NotUpperRight and right of B is not Red or Green,
+.@@G..  then B becomes LowerLeft.
+..@G..
+..@AGG
+..@@@@
+
+.@@@@
+.@BGG  Moving up,
+.@G..  where A is NotUpperRight and left of B is not Red or Green,
+.@G..  then B becomes NotLowerRight.
+.@AGG
+.@@@@
 
 // RIGHT RIGHT RIGHT RIGHT //
 
@@ -104,15 +168,21 @@ GGA@.
 @G..G@  then B becomes NotLowerRight.
 ....G@
 
+.G@... Moving left,
+.G@@@@ where A is NotLowerLeft and below B is not Red or Green,
+.BGGA@ then B becomes UpperRight.
+....G@
+....G@
+
 @@@@G.  Moving left,
 @BGGA.  where A is UpperLeft and above B is not Red or Green,
 @G....  then B becomes NotLowerRight.
 ......
 
-......  Moving left,
-.BGGA.  where A is LowerLeft and above B is not Red or Green,
-.G@@G.  then B becomes LowerRight.
-.G@@G.
+.G@@G. Moving left,
+.G@@G. where A is UpperLeft and below B is not Red or Green,
+.BGGA. then B becomes UpperRight.
+......
 
 ....G@  Moving left,
 ....G@  where A is NotUpperLeft and above B is not Red or Green,
@@ -120,26 +190,20 @@ GGA@.
 .G@@@@  
 .G@...
 
-@G.... Moving left,
-@G.... where A is LowerLeft and below B is not Red or Green,
-@BGGA. then B becomes NotUpperRight.
-@@@@G.
-...@G.
-
 @G..G@ Moving left,
 @G..G@ where A is NotUpperLeft and below B is not Red or Green,
 @BGGA@ then B becomes NotUpperRight.
 @@@@@@
 ......
 
-.G@... Moving left,
-.G@@@@ where A is NotLowerLeft and below B is not Red or Green,
-.BGGA@ then B becomes UpperRight.
-....G@
-....G@
+......  Moving left,
+.BGGA.  where A is LowerLeft and above B is not Red or Green,
+.G@@G.  then B becomes LowerRight.
+.G@@G.
 
-.G@@G. Moving left,
-.G@@G. where A is UpperLeft and below B is not Red or Green,
-.BGGA. then B becomes UpperRight.
-......
+@G.... Moving left,
+@G.... where A is LowerLeft and below B is not Red or Green,
+@BGGA. then B becomes NotUpperRight.
+@@@@G.
+...@G.
 

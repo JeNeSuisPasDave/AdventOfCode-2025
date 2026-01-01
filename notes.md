@@ -439,3 +439,13 @@ file_to_points() took 0.00531775 secs
 inserting red tiles took 0.001163209 secs
 connecting red tiles took 0.968863125 secs
 ^C
+
+*Wednesday, 2026-01-01*
+
+Working on scheme to mark inside corners. Spent a few hours on this.
+
+*Thursday, 2026-01-01*
+
+**09:44**
+
+Finished implementation of scheme to mark inside corners of red tiles, and confirmed that each red tile is always a corner and not intermediate between corners (i.e. not part of a side).
